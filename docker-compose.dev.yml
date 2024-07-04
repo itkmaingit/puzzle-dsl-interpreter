@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    tty: true
+    working_dir: /home/node/works
+    volumes:
+      - ./works:/home/node/works
+      - ./ruff.toml:/home/node/works/ruff.toml
+      - ./mypy.ini:/home/node/works/mypy.ini
+      - ./pytest.ini:/home/node/works/pytest.ini
+      - ./.vscode:/home/node/works/.vscode

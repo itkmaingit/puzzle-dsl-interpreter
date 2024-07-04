@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "puzzle dsl"
+version = "0.1.0"
+description = "This is a language for describing puzzle rules. See Readme in root directory for more information."
+authors = ["itk"]
+packages = [
+    { include = "app"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.7.4"
+pytest = "^8.2.2"
+antlr4-python3-runtime = "^4.13.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

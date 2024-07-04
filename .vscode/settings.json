@@ -1,0 +1,51 @@
+{
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "mypy-type-checker.args": [
+    "--config-file=mypy.ini"
+  ],
+  "ruff.format.args": [
+    "--config=ruff.toml"
+  ],
+  "ruff.lint.args": [
+    "--config=ruff.toml"
+  ],
+  "ruff.organizeImports": true, // source.organizeImports を実行するのにruffを使用するか否か。
+  "ruff.fixAll": true, // source.fixAll を実行するのにruffを使用するか否か。
+  "ruff.codeAction.fixViolation": { // Quick Fix を表示するか否か。
+    "enable": true
+  },
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true,
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.completeFunctionParens": true,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": [
+    "-c",
+    "pytest.ini"
+  ],
+  "python.analysis.extraPaths": [
+    "/home/node/works/puzzle_dsl_interpreter",
+  ],
+  "python.analysis.exclude": [
+    "**/parser"
+  ],
+  "antlr4.generation": {
+    "mode": "external", // 決め打ち(多分)
+    "language": "Python3", // 出力したいプログラミング言語名
+    "listeners": true, // listener形式で出力するか
+    "visitors": true, // visitor形式で出力するか
+    "alternativeJar": "/usr/local/lib/antlr-4.13.1-complete.jar", // ANTLRのjarファイル(※)
+    "outputDir": "../parser" // 出力先のフォルダ名
+  },
+  "ruff.exclude": [
+    "**/parser"
+  ],
+}

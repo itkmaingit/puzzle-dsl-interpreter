@@ -1,0 +1,48 @@
+# 対象とするPythonのバージョン
+target-version = "py312"
+
+
+# 行の最大長
+line-length = 88
+
+fix = true
+
+# 除外するファイルやディレクトリ
+exclude = ["puzzle_dsl_interpreter/parser"]
+
+# 特定のファイルパターンのみをチェック
+include = ["*.py"]
+
+# pydocstyleの設定
+[pydocstyle]
+convention = "google"
+
+[lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[lint]
+# チェックするルールのカテゴリ
+select = ["ALL"]
+
+# 無視するエラーや警告
+ignore = [
+    "E501",   # Line too long
+    "S101",   # not use assert
+    "N805",   # first argument must be self
+    "S603",   # not use subprocess
+    "INP001", # must add __init__.py
+    "D",
+    "ANN",
+    "TRY",
+    "EM",
+    "TCH",
+    "ERA001",
+    "T201",
+    "EXE002",
+    "TD",
+    "FIX",
+    "N802",
+    "PLR0911",
+]
+
+fixable = ["ALL"]
