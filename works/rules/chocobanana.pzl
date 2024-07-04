@@ -1,0 +1,16 @@
+structs:
+	A1  = combine ( C , { H, V }  );
+	A2  = combine ( C , { H, V }  );
+
+domain:
+	P = { null };
+	C = { null };
+	Ep = { null };
+	Ec = { null };
+	A1  = { 1 ... n * m  };
+	A2  = { 1 ... n * m  };
+
+constraints:
+	fill(A1, A2);
+	All(a1) <- B(A1), !is_rectangle(a) && solution(a1) == |a1|;
+	All(a2) <- B(A2), is_rectangle(a) && solution(a2) == |a2|;

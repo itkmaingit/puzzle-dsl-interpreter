@@ -1,0 +1,21 @@
+structs:
+	A  = combine ( C , { H, V }  );
+	Ah  = combine ( C , { H }  );
+	Av  = combine ( C , { V }  );
+
+domain:
+	P = { null   };
+	C = { 1 ... 9 };
+	Ep = { 0,1 };
+	Ec = { null  };
+	A  = { null  };
+	Ah  = { null  };
+	Av  = { null  };
+
+constraints:
+	fill(A);
+	fill(Ah);
+	fill(Av);
+	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
+	All(av) <- B(Av), |av| == 9 && all_different(av);
+	All(a) <- B(A), |a| == 9 && all_different(a) && is_square(a);

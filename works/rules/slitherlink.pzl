@@ -1,0 +1,15 @@
+structs:
+	Gp  = combine ( Ep , { H, V }  );
+
+domain:
+	P = { null   };
+	C = { 0...4 };
+	Ep = { 0,1 };
+	Ec = { null  };
+	Gp  = { null  };
+
+constraints:
+	All(gp) <- B(Gp), All(ep) <- gp, solution(ep) == 1;
+	All(p) <- B(P), cross(p) == 2;
+	All(c) <- B(C), solution(c) == cycle(c);
+	|B(Gp)| == 1;
