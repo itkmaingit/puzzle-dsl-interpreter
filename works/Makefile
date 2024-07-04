@@ -14,6 +14,7 @@ init:
 .PHONY: run
 run:
 		@bash scripts/convert_tabs_to_spaces.sh
+		@python scripts/convert_head_spaces_to_tabs.py
 		poetry run python puzzle_dsl_interpreter/main.py $(INPUT)
 
 .PHONY: test

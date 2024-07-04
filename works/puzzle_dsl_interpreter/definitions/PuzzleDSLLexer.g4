@@ -82,16 +82,10 @@ CONNECT: 'connect'; // STRUCT_ELEMENT -> BOOL
 NO_OVERLAP: 'no_overlap'; // STRUCT_SET -> BOOL
 FILL: 'fill'; // STRUCT_SET -> BOOL
 
-IN: '<-';
-SUBSET: '<=';
-ALL: 'All';
-EXISTS: 'Exists';
 VARIABLE: [a-lo-wyz]| [a-lo-wyz][a-z]| [a-lo-wyz][0-9];
 SUM: 'Sum';
 PRODUCT: 'Product';
 EMPTYSET: 'None';
-EQUAL: '==';
-NOTEQUAL: '!=';
 
 // other tokens
 ASSIGN: '=';
@@ -104,13 +98,21 @@ LPAREN: '(';
 RPAREN: ')';
 LCURLY: '{';
 RCURLY: '}';
+LBRACKET: '[';
+RBRACKET: ']';
 
 COMMA: ',';
 
+EQUAL: '==';
+NOTEQUAL: '!=';
 AND: '&&';
 NOT: '!';
 PIPE: '|';
 SEMI: ';';
+IN: '<-';
+SUBSET: '<=';
+ALL: 'All';
+EXISTS: 'Exists';
 
 PLUS: '+';
 MINUS: '-';

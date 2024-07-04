@@ -14,9 +14,9 @@ domain:
 
 constraints:
 	n == m;
-	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
-	All(av) <- B(Av), |av| == 9 && all_different(av);
-	All(a) <- B(A), |a| == 9 && all_different(a) && solution(a) == Product{c <- a}(solution(c));
 	fill(Ah);
 	fill(Av);
-	fill(A);
+	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
+	All(av) <- B(Av), |av| == 9 && all_different(av);
+	|B(A)| == 1;
+	All(c) <- B(C), solution(c) == x <=> {c <- a | a <- B(A)} == None && {co <- connect(c, {H, V}) | solution(co) == x} == None;

@@ -8,6 +8,32 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
     def __init__(self, parser: PuzzleDSLParser):
         self.__parser = parser
 
+    def visitStructDefinitions(self, ctx: PuzzleDSLParser.StructDefinitionsContext):
+        print("struct: ", ctx.getChildCount())
+        print()
+        for child in ctx.getChildren():
+            print(child.getText())
+        return super().visitStructDefinitions(ctx)
+
+    def visitDomainDefinitions(self, ctx: PuzzleDSLParser.DomainDefinitionsContext):
+        print()
+        print("domain: ", ctx.getChildCount())
+        print()
+        for child in ctx.getChildren():
+            print(child.getText())
+        return super().visitStructDefinitions(ctx)
+
+    def visitConstraintsDefinitions(
+        self,
+        ctx: PuzzleDSLParser.ConstraintsDefinitionsContext,
+    ):
+        print()
+        print("constraints: ", ctx.getChildCount())
+        print()
+        for child in ctx.getChildren():
+            print(child.getText())
+        return super().visitConstraintsDefinitions(ctx)
+
 
 # ctx method
 

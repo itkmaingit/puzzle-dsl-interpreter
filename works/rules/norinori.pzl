@@ -1,0 +1,18 @@
+structs:
+	A1 = combine ( C , { H, V } );
+	A2 = combine ( C , { H, V } );
+
+domain:
+	P = { null };
+	C = { null, x };
+	Ep = { null };
+	Ec = { null };
+	A1 = { null };
+	A2 = { null };
+
+constraints:
+	no_overlap(A1);
+	fill(A2);
+	All(c) <- B(C), solution(c) == x <=> Exists(a1) <- B(A1), c <- a1;
+	All(a1) <- B(A1), |a1| == 2;
+	All(a2) <- B(A2), |{c <- a2 | solution(c) == x}| == 2;

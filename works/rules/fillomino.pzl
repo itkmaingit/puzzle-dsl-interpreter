@@ -3,11 +3,11 @@ structs:
 
 domain:
 	P = { null };
-	C = { null };
+	C = { 1 ... n * m };
 	Ep = { null };
 	Ec = { null };
 	A = { 1 ... n * m };
 
 constraints:
 	fill(A);
-	All(a) <- B(A), is_rectangle(a) && solution(a) == |a|;
+	All(a) <- B(A), All(c) <- a, solution(a) == solution(c) && solution(a) == |a|;

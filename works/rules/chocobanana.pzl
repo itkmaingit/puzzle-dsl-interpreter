@@ -1,14 +1,14 @@
 structs:
-	A1  = combine ( C , { H, V }  );
-	A2  = combine ( C , { H, V }  );
+	A1 = combine ( C , { H, V } );
+	A2 = combine ( C , { H, V } );
 
 domain:
 	P = { null };
 	C = { null };
 	Ep = { null };
 	Ec = { null };
-	A1  = { 1 ... n * m  };
-	A2  = { 1 ... n * m  };
+	A1 = { 1 ... n * m };
+	A2 = { 1 ... n * m };
 
 constraints:
 	fill(A1, A2);

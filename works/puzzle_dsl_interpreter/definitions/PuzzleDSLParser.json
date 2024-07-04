@@ -6,6 +6,6 @@
   "maxParserIterations": 3,
   "minLexerIterations": 0,
   "maxLexerIterations": 5,
-  "maxRecursions": 2,
+  "maxRecursions": 1,
   "actionFile": ""
 }

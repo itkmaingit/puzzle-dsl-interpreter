@@ -1,0 +1,15 @@
+structs:
+	A = combine ( C , { H, V } );
+
+domain:
+	P = { null };
+	C = { null, 0 ... n * m - 1, x};
+	Ep = { null };
+	Ec = { null };
+	A = { null };
+
+constraints:
+	no_overlap(A);
+	All(a) <- B(A), connect(a, {H, V}) == None;
+	All(c) <- B(C), solution(c) != null => solution(c) == Sum{All(co) <- connect(c, {H, V}), a <- { a <- B(A) | co <- a }}(|a|);
+	All(c) <- B(C), solution(c) == x => Exists(a) <- B(A), c <- a;

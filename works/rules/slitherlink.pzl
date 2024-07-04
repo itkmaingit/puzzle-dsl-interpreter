@@ -1,12 +1,12 @@
 structs:
-	Gp  = combine ( Ep , { H, V }  );
+	Gp = combine ( Ep , { H, V } );
 
 domain:
-	P = { null   };
+	P = { null };
 	C = { 0...4 };
 	Ep = { 0,1 };
-	Ec = { null  };
-	Gp  = { null  };
+	Ec = { null };
+	Gp = { null };
 
 constraints:
 	All(gp) <- B(Gp), All(ep) <- gp, solution(ep) == 1;

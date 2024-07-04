@@ -17,10 +17,10 @@ file:
 // struct pattern
 structsDeclaration: STRUCTS_DECLARATION; //
 
-structDefinitions: (INDENT? structDefinition)*; //
+structDefinitions: structDefinition*; //
 
 structDefinition:
-	otherStructID ASSIGN COMBINE LPAREN structID COMMA relationshipSet RPAREN SEMI; //
+	INDENT otherStructID ASSIGN COMBINE LPAREN structID COMMA relationshipSet RPAREN SEMI; //
 
 otherStructID: OTHER_STRUCTS_IDENT; //
 
@@ -34,13 +34,13 @@ domainDefinitions:
 		customStructDefinition
 	)*; //
 
-pDefinition: (INDENT? P ASSIGN domainSet SEMI); //
-cDefinition: (INDENT? C ASSIGN domainSet SEMI); //
-epDefinition: (INDENT? EP ASSIGN domainSet SEMI); //
-ecDefinition: (INDENT? EC ASSIGN domainSet SEMI); //
+pDefinition: (INDENT P ASSIGN domainSet SEMI); //
+cDefinition: (INDENT C ASSIGN domainSet SEMI); //
+epDefinition: (INDENT EP ASSIGN domainSet SEMI); //
+ecDefinition: (INDENT EC ASSIGN domainSet SEMI); //
 
 customStructDefinition: (
-		INDENT? otherStructID ASSIGN domainSet SEMI
+		INDENT otherStructID ASSIGN domainSet SEMI
 	); //
 
 domainSet: LCURLY domainSetBody RCURLY; //
@@ -66,26 +66,47 @@ rangeValue: intDomainValue DOTS intDomainValue;
 // constraints pattern
 constraintsDeclaration: CONSTRAINTS_DECLARATION; //
 
-constraintsDefinitions: (INDENT constraint SEMI)+; //
+constraintsDefinitions: constraintDefinition+; //
+
+constraintDefinition: (INDENT constraint SEMI);
 
 constraint: singleBool (AND singleBool)*; //
 
-singleBool: singleBoolBase ((THEN | EQUIVALENT) singleBool)?; //
+singleBool: (singleBoolBase ((THEN | EQUIVALENT) singleBool)?)
+	| LBRACKET (singleBoolBase ((THEN | EQUIVALENT) singleBool)?) RBRACKET; //
 
 singleBoolBase: (
-		(generationBoundVariable | generationStructElement) COMMA
-	)*? NOT? (
-		fillFunction
-		| noOverlapFunction
-		| allDifferentFunction
-		| set (SUBSET | IN) set
-		| isRectangleFunction
-		| isRectangleFunction
-		| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
-		| value (NOTEQUAL | EQUAL) value
-	); //
+		(
+			(generationBoundVariable | generationStructElement) COMMA
+		)*? NOT? (
+			fillFunction
+			| noOverlapFunction
+			| allDifferentFunction
+			| set (SUBSET | IN) set
+			| value IN set
+			| isSquareFunction
+			| isRectangleFunction
+			| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
+			| value (NOTEQUAL | EQUAL) value
+		)
+	)
+	| LBRACKET (
+		(
+			(generationBoundVariable | generationStructElement) COMMA
+		)*? NOT? (
+			fillFunction
+			| noOverlapFunction
+			| allDifferentFunction
+			| set (SUBSET | IN) set
+			| value IN set
+			| isSquareFunction
+			| isRectangleFunction
+			| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
+			| value (NOTEQUAL | EQUAL) value
+		)
+	) RBRACKET; //
 
-value: int | solutionFunction;
+value: int | solutionFunction | NULL | VALUE_IDENT;
 int:
 	NUMBER
 	| WIDTH
@@ -113,9 +134,14 @@ fillFunction: FILL LPAREN structID (COMMA structID)* RPAREN; //
 
 //builtin function pattern
 solutionFunction: SOLUTION LPAREN structElement RPAREN; //
-sumFunction: SUM LCURLY pickUp RCURLY LPAREN int RPAREN; //
+sumFunction:
+	SUM LCURLY (
+		(generationBoundVariable | generationStructElement) COMMA
+	)*? set (SUBSET | IN) set RCURLY LPAREN int RPAREN; //
 productFunction:
-	PRODUCT LCURLY pickUp RCURLY LPAREN int RPAREN; //
+	PRODUCT LCURLY (
+		(generationBoundVariable | generationStructElement) COMMA
+	)*? set (SUBSET | IN) set RCURLY LPAREN int RPAREN; //
 
 // variables
 structElement: VARIABLE; //
@@ -134,12 +160,11 @@ generationSet:
 	LCURLY VARIABLE (IN set)? PIPE constraint RCURLY; //
 
 set:
-	bFunction
+	INTEGER //
+	| bFunction
 	| structElement
 	| connectFunction
-	| generationSet; //
-
-pickUp: VARIABLE IN set; //
+	| generationSet;
 
 // utils pattern
 relationshipSet: LCURLY relationshipSetBody RCURLY; //
