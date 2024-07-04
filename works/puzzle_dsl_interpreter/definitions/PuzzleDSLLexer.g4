@@ -16,6 +16,7 @@ tokens {
 	NUMBER,
 	NULL,
 	VALUE_IDENT,
+	DOMAIN_VALUE,
 	NL,
 	TAB,
 	ASSIGN,
@@ -43,20 +44,18 @@ H: 'H';
 V: 'V';
 D: 'D';
 
-fragment RELATIONSHIP_IDENT: H | V | D;
-
 OTHER_STRUCTS_IDENT:
 	[ADFGI-OQ-UW-Z]
 	| [ADFGI-OQ-UW-Z][0-9]
 	| [ADFGI-OQ-UW-Z][a-z];
 
-fragment STRUCTS_IDENT: P | C | EP | EC | OTHER_STRUCTS_IDENT;
-
 COMBINE: 'combine';
 
 // domain tokens
 
-NUMBER: [0-9]+;
+DOMAIN_DECLARATION: 'domain:';
+
+NUMBER: [1-9][0-9]?;
 
 NULL: 'null';
 
@@ -75,6 +74,6 @@ RCURLY: '}';
 
 COMMA: ',';
 
-SPACE: (' ' | '\t') -> channel(HIDDEN); // スペースとタブを隠しチャンネルに送る
+SPACE: (' ') -> channel(HIDDEN); // スペースとタブを隠しチャンネルに送る
 NEWLINE: '\r'? '\n' -> channel(HIDDEN); // 改行を隠しチャンネルに送る
 INDENT: '\t'; // タブをインデントとして明示的に扱う
