@@ -28,7 +28,11 @@ tokens {
 	COMMA,
 	SPACE,
 	NEWLINE,
-	INDENT
+	INDENT,
+	AND,
+	SUBSET,
+	M,
+	N
 }
 
 // sturcts tokens
@@ -45,9 +49,9 @@ V: 'V';
 D: 'D';
 
 OTHER_STRUCTS_IDENT:
-	[ADFGI-OQ-UW-Z]
-	| [ADFGI-OQ-UW-Z][0-9]
-	| [ADFGI-OQ-UW-Z][a-z];
+	[ADFGI-MOQ-UW-Z]
+	| [ADFGI-MOQ-UW-Z][0-9]
+	| [ADFGI-MOQ-UW-Z][a-z];
 
 COMBINE: 'combine';
 
@@ -55,17 +59,46 @@ COMBINE: 'combine';
 
 DOMAIN_DECLARATION: 'domain:';
 
-NUMBER: [1-9][0-9]?;
+NUMBER: [1-9][0-9] | [0-9];
 
 NULL: 'null';
 
-VALUE_IDENT: [a-z] | [a-z]'_' [0-9];
+VALUE_IDENT: 'x' | 'x_' [0-9];
+
+DOTS: '...';
+
+// constraints tokens
+CONSTRAINTS_DECLARATION: 'constraints:';
+
+// heuristic function tokens
+SOLUTION: 'solution';
+B: 'B'; // STRUCT_SET -> STRUCT_ELEMENT
+CROSS: 'cross'; // P_ELEMENT -> NUMBER
+CYCLE: 'cycle'; // C_ELEMENT -> NUMBER
+ALL_DIFFERENT: 'all_different'; // SET -> BOOL
+IS_RECTANGLE: 'is_rectangle'; // STRUCT_ELEMENT -> BOOL
+IS_SQUARE: 'is_square'; // STRUCT_ELEMENT -> BOOL
+CONNECT: 'connect'; // STRUCT_ELEMENT -> BOOL
+NO_OVERLAP: 'no_overlap'; // STRUCT_SET -> BOOL
+FILL: 'fill'; // STRUCT_SET -> BOOL
+
+IN: '<-';
+SUBSET: '<=';
+ALL: 'All';
+EXISTS: 'Exists';
+VARIABLE: [a-lo-wyz]| [a-lo-wyz][a-z]| [a-lo-wyz][0-9];
+SUM: 'Sum';
+PRODUCT: 'Product';
+EMPTYSET: 'None';
+EQUAL: '==';
+NOTEQUAL: '!=';
 
 // other tokens
-
 ASSIGN: '=';
 
 RIGHT_ARROW: '->';
+THEN: '=>';
+EQUIVALENT: '<=>';
 
 LPAREN: '(';
 RPAREN: ')';
@@ -74,6 +107,20 @@ RCURLY: '}';
 
 COMMA: ',';
 
+AND: '&&';
+NOT: '!';
+PIPE: '|';
+SEMI: ';';
+
+PLUS: '+';
+MINUS: '-';
+TIMES: '*';
+
+INTEGER: 'N';
+HEIGHT: 'n';
+WIDTH: 'm';
+
+// For formatting purposes.
 SPACE: (' ') -> channel(HIDDEN); // スペースとタブを隠しチャンネルに送る
 NEWLINE: '\r'? '\n' -> channel(HIDDEN); // 改行を隠しチャンネルに送る
 INDENT: '\t'; // タブをインデントとして明示的に扱う
