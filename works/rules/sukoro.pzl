@@ -1,12 +1,12 @@
 structs:
 	A = combine ( C , { H, V } );
 
-domain:
-	P = { null };
-	C = { null, 1 ... 4};
-	Ep = { null };
-	Ec = { null };
-	A = { null };
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { null, 1 ... 4} -> { undecided };
+	Ep <-> { null } -> { null };
+	Ec <-> { null } -> { null };
+	A <-> { null } -> { null };
 
 constraints:
 	|B(A)| == 1;

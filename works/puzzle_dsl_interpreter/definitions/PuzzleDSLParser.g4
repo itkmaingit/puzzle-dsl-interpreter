@@ -10,103 +10,112 @@ from members.utils import validate_relationship_set, check_unique
 from members.domain import validate_domain_set
 }
 
+// -----------------------------------------------------------------------------------------
+
+// root context
 file:
-	structsDeclaration structDefinitions domainDeclaration domainDefinitions constraintsDeclaration
-		constraintsDefinitions;
+	structsDeclaration structDefinitions domainHiddenDeclaration domainDefinitions
+		constraintsDeclaration constraintsDefinitions;
 
-// struct pattern
-structsDeclaration: STRUCTS_DECLARATION; //
+// -----------------------------------------------------------------------------------------
 
-structDefinitions: structDefinition*; //
+// Declation Context
+structsDeclaration: STRUCTS_DECLARATION;
+domainHiddenDeclaration: DOMAIN_HIDDEN_DECLARATION;
+constraintsDeclaration: CONSTRAINTS_DECLARATION;
 
+// -----------------------------------------------------------------------------------------
+
+// Structs Context
+structID: P | C | EP | EC | NEW_STRUCT_ID;
+newStructID: NEW_STRUCT_ID;
+structDefinitonBody:
+	COMBINE LPAREN structID COMMA relationshipSet RPAREN;
 structDefinition:
-	INDENT otherStructID ASSIGN COMBINE LPAREN structID COMMA relationshipSet RPAREN SEMI; //
+	INDENT newStructID ASSIGN structDefinitonBody SEMI;
+structDefinitions: structDefinition*;
 
-otherStructID: OTHER_STRUCTS_IDENT; //
+// relationship
+relationshipID: H | V | D;
+relationshipSetBody:
+	relationshipID (COMMA relationshipID)* {
+    elements = [e.getText() for e in self._ctx.relationshipID()]
+    self.validate_relationship_set(elements)
+};
+relationshipSet: LCURLY relationshipSetBody RCURLY;
 
-structID: P | C | EP | EC | OTHER_STRUCTS_IDENT; //
+// -----------------------------------------------------------------------------------------
 
-// domain pattern
-domainDeclaration: DOMAIN_DECLARATION; //
+// Domain Hidden Context
 
-domainDefinitions:
-	pDefinition cDefinition epDefinition ecDefinition (
-		customStructDefinition
-	)*; //
+// Predefined Struct ID
+pID: P;
+cID: C;
+epID: EP;
+ecID: EC;
 
-pDefinition: (INDENT P ASSIGN domainSet SEMI); //
-cDefinition: (INDENT C ASSIGN domainSet SEMI); //
-epDefinition: (INDENT EP ASSIGN domainSet SEMI); //
-ecDefinition: (INDENT EC ASSIGN domainSet SEMI); //
+// domain
 
-customStructDefinition: (
-		INDENT otherStructID ASSIGN domainSet SEMI
-	); //
-
-domainSet: LCURLY domainSetBody RCURLY; //
-
-domainSetBody:
-	domainValue (COMMA domainValue)* {
-    elements = [e.getText() for e in self._ctx.domainValue()]
-    self.validate_domain_set(elements)
-}; //
-
-domainValue: intDomainValue | rangeValue | NULL | VALUE_IDENT; //
-
+// assignable Value (in domain)
 intDomainValue:
-	(WIDTH | HEIGHT) (PLUS | MINUS | TIMES) (WIDTH | HEIGHT) //
+	(WIDTH | HEIGHT) (PLUS | MINUS | TIMES) (WIDTH | HEIGHT)
 	| (WIDTH | HEIGHT) (PLUS | MINUS | TIMES) intDomainValue
 	| WIDTH
 	| HEIGHT
 	| intDomainValue (PLUS | MINUS | TIMES) (WIDTH | HEIGHT)
 	| NUMBER;
+rangeValue: intDomainValue DOTS (intDomainValue | INF);
+domainValue: intDomainValue | rangeValue | NULL | CONSTANT_ID;
 
-rangeValue: intDomainValue DOTS intDomainValue;
+domainSetBody:
+	domainValue (COMMA domainValue)* {
+    elements = [e.getText() for e in self._ctx.domainValue()]
+    self.validate_domain_set(elements)
+};
+domainSet: LCURLY domainSetBody RCURLY;
 
-// constraints pattern
-constraintsDeclaration: CONSTRAINTS_DECLARATION; //
+// hidden
 
-constraintsDefinitions: constraintDefinition+; //
+// assignable Value (in hidden)
+hiddenValue: domainValue | UNDECIDED;
 
-constraintDefinition: (INDENT constraint SEMI);
+hiddenSetBody:
+	hiddenValue (COMMA hiddenValue)* {
+    elements = [e.getText() for e in self._ctx.hiddenValue()]
+    self.validate_domain_set(elements)
+};
+hiddenSet: LCURLY hiddenSetBody RCURLY;
 
-constraint: singleBool (AND singleBool)*; //
+// definition body
+domainDefinitionBody: domainSet RIGHT_ARROW hiddenSet;
 
-singleBool: (singleBoolBase ((THEN | EQUIVALENT) singleBool)?)
-	| LBRACKET (singleBoolBase ((THEN | EQUIVALENT) singleBool)?) RBRACKET; //
+// definition expressions
+pDefinition: (
+		INDENT pID LEFT_RIGHT_ARROW domainDefinitionBody SEMI
+	);
+cDefinition: (
+		INDENT cID LEFT_RIGHT_ARROW domainDefinitionBody SEMI
+	);
+epDefinition: (
+		INDENT epID LEFT_RIGHT_ARROW domainDefinitionBody SEMI
+	);
+ecDefinition: (
+		INDENT ecID LEFT_RIGHT_ARROW domainDefinitionBody SEMI
+	);
+customStructDefinition: (
+		INDENT newStructID LEFT_RIGHT_ARROW domainDefinitionBody SEMI
+	);
 
-singleBoolBase: (
-		(
-			(generationBoundVariable | generationStructElement) COMMA
-		)*? NOT? (
-			fillFunction
-			| noOverlapFunction
-			| allDifferentFunction
-			| set (SUBSET | IN) set
-			| value IN set
-			| isSquareFunction
-			| isRectangleFunction
-			| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
-			| value (NOTEQUAL | EQUAL) value
-		)
-	)
-	| LBRACKET (
-		(
-			(generationBoundVariable | generationStructElement) COMMA
-		)*? NOT? (
-			fillFunction
-			| noOverlapFunction
-			| allDifferentFunction
-			| set (SUBSET | IN) set
-			| value IN set
-			| isSquareFunction
-			| isRectangleFunction
-			| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
-			| value (NOTEQUAL | EQUAL) value
-		)
-	) RBRACKET; //
+domainDefinitions:
+	pDefinition cDefinition epDefinition ecDefinition (
+		customStructDefinition
+	)*;
 
-value: int | solutionFunction | NULL | VALUE_IDENT;
+// -----------------------------------------------------------------------------------------
+
+// Constraints Context
+
+// value
 int:
 	NUMBER
 	| WIDTH
@@ -117,62 +126,72 @@ int:
 	| productFunction
 	| sumFunction
 	| PIPE set PIPE
-	| int (PLUS | MINUS | TIMES) int; //
+	| int (PLUS | MINUS | TIMES) int;
 
-// heuristic function pattern
-bFunction: B LPAREN structID RPAREN; //
-crossFunction: CROSS LPAREN structElement RPAREN; //
-cycleFunction: CYCLE LPAREN structElement RPAREN; //
-allDifferentFunction:
-	ALL_DIFFERENT LPAREN structElement RPAREN; //
-isRectangleFunction: IS_RECTANGLE LPAREN structElement RPAREN; //
-isSquareFunction: IS_SQUARE LPAREN structElement RPAREN; //
-connectFunction:
-	CONNECT LPAREN structElement COMMA relationshipSet RPAREN; //
-noOverlapFunction: NO_OVERLAP LPAREN structID RPAREN; //
-fillFunction: FILL LPAREN structID (COMMA structID)* RPAREN; //
-
-//builtin function pattern
-solutionFunction: SOLUTION LPAREN structElement RPAREN; //
-sumFunction:
-	SUM LCURLY (
-		(generationBoundVariable | generationStructElement) COMMA
-	)*? set (SUBSET | IN) set RCURLY LPAREN int RPAREN; //
-productFunction:
-	PRODUCT LCURLY (
-		(generationBoundVariable | generationStructElement) COMMA
-	)*? set (SUBSET | IN) set RCURLY LPAREN int RPAREN; //
-
-// variables
-structElement: VARIABLE; //
-
-generationStructElement:
-	(ALL | EXISTS) LPAREN structElement RPAREN IN (
-		bFunction
-		| structElement
-	); //
-
-generationBoundVariable: (ALL | EXISTS) LPAREN VARIABLE RPAREN IN (
-		set
-	); //
-
-generationSet:
-	LCURLY VARIABLE (IN set)? PIPE constraint RCURLY; //
+primitiveValue: int | solutionFunction | NULL | CONSTANT_ID;
 
 set:
-	INTEGER //
+	INTEGER
 	| bFunction
 	| structElement
 	| connectFunction
 	| generationSet;
 
-// utils pattern
-relationshipSet: LCURLY relationshipSetBody RCURLY; //
+// heuristic function
+solutionFunction: SOLUTION LPAREN structElement RPAREN;
+bFunction: B LPAREN structID RPAREN;
+crossFunction: CROSS LPAREN structElement RPAREN;
+cycleFunction: CYCLE LPAREN structElement RPAREN;
+allDifferentFunction: ALL_DIFFERENT LPAREN structElement RPAREN;
+isRectangleFunction: IS_RECTANGLE LPAREN structElement RPAREN;
+isSquareFunction: IS_SQUARE LPAREN structElement RPAREN;
+connectFunction:
+	CONNECT LPAREN structElement COMMA relationshipSet RPAREN;
+noOverlapFunction:
+	NO_OVERLAP LPAREN newStructID (COMMA newStructID)* RPAREN;
+fillFunction:
+	FILL LPAREN newStructID (COMMA newStructID)* RPAREN;
 
-relationshipSetBody:
-	relationshipID (COMMA relationshipID)* {
-    elements = [e.getText() for e in self._ctx.relationshipID()]
-    self.validate_relationship_set(elements)
-}; //
+//general function
+sumFunction:
+	SUM LCURLY (generationBoundVariable COMMA)*? set (
+		SUBSET
+		| IN
+	) set RCURLY LPAREN int RPAREN;
+productFunction:
+	PRODUCT LCURLY (generationBoundVariable COMMA)*? set (
+		SUBSET
+		| IN
+	) set RCURLY LPAREN int RPAREN;
 
-relationshipID: H | V | D; //
+// generation variables
+structElement: BOUND_VARIABLE;
+
+generationBoundVariable: (ALL | EXISTS) LPAREN BOUND_VARIABLE RPAREN IN (
+		set
+	);
+
+generationSet:
+	LCURLY BOUND_VARIABLE (IN set)? PIPE constraint RCURLY;
+
+// boolean
+singleBoolBase:
+	(generationBoundVariable COMMA)*? NOT? (
+		fillFunction
+		| noOverlapFunction
+		| allDifferentFunction
+		| set (SUBSET | IN) set
+		| primitiveValue IN set
+		| isSquareFunction
+		| isRectangleFunction
+		| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
+		| primitiveValue (NOTEQUAL | EQUAL) primitiveValue
+	);
+
+singleBool: (singleBoolBase ((THEN | EQUIVALENT) singleBool)?)
+	| LBRACKET (singleBoolBase ((THEN | EQUIVALENT) singleBool)?) RBRACKET;
+
+// constraint definitions
+constraint: singleBool (AND singleBool)*;
+constraintDefinition: (INDENT constraint SEMI);
+constraintsDefinitions: constraintDefinition+;

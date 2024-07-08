@@ -2,13 +2,13 @@ structs:
 	A1 = combine ( C , { H, V } );
 	A2 = combine ( C , { H, V } );
 
-domain:
-	P = { null };
-	C = { null, x };
-	Ep = { null };
-	Ec = { null };
-	A1 = { null };
-	A2 = { null };
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { null, x } -> { undecided };
+	Ep <-> { null } -> { null };
+	Ec <-> { null } -> { null };
+	A1 <-> { null } -> { null };
+	A2 <-> { null } -> { null };
 
 constraints:
 	no_overlap(A1);

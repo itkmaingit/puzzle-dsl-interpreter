@@ -1,12 +1,12 @@
 structs:
 	A = combine ( C , { H, V } );
 
-domain:
-	P = { null };
-	C = { 1 ... n * m };
-	Ep = { null };
-	Ec = { null };
-	A = { 1 ... n * m };
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { 1 ... n * m } -> { 1 ... n * m, undecided };
+	Ep <-> { null } -> { null };
+	Ec <-> { null } -> { null };
+	A <-> { 1 ... n * m } -> { 1 ... n * m, undecided };
 
 constraints:
 	fill(A);

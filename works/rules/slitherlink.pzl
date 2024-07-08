@@ -1,12 +1,12 @@
 structs:
 	Gp = combine ( Ep , { H, V } );
 
-domain:
-	P = { null };
-	C = { 0...4 };
-	Ep = { 0,1 };
-	Ec = { null };
-	Gp = { null };
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { 0 ... 4 } -> { 0 ... 4, undecided };
+	Ep <-> { 0,1 } -> { undecided };
+	Ec <-> { null } -> { null };
+	Gp <-> { null } -> { null };
 
 constraints:
 	All(gp) <- B(Gp), All(ep) <- gp, solution(ep) == 1;
