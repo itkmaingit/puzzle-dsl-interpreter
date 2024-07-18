@@ -48,4 +48,5 @@
   "ruff.exclude": [
     "**/parser"
   ],
+  "editor.renderWhitespace": "all",
 }

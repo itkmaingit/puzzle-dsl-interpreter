@@ -6,7 +6,7 @@
       "type": "antlr-debug", // 決め打ち(多分)
       "request": "launch", // 決め打ち(多分)
       "grammar": "${file}", // 使用するグラマーファイル
-      "input": "/home/node/works/rules/shikaku.pzl", // 入力となるテキストを記述したファイル
+      "input": "/home/node/works/rules/slitherlink.pzl", // 入力となるテキストを記述したファイル
       "printParseTree": true, // デバッグ結果をデバッグコンソールに表示するか
       "visualParseTree": true // デバッグ結果をグラフィカルなツリーで表示するか
     },

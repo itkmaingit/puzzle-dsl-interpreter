@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 
-from antlr4 import CommonTokenStream, FileStream, ParseTreeWalker
+from antlr4 import CommonTokenStream, FileStream, InputStream, ParseTreeWalker
 from interpreter.CustomPuzzleDSLParserListener import (
     CustomPuzzleDSLParserListener as Listener,
 )
@@ -14,8 +14,8 @@ from parser.PuzzleDSLParser import PuzzleDSLParser
 
 
 def main(argv):
-    # input_stream = InputStream(argv[1])
-    input_stream = FileStream(argv[1])
+    input_stream = InputStream(argv[1])
+    input_stream = FileStream(argv[1], encoding="utf-8")
     lexer = PuzzleDSLLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = PuzzleDSLParser(stream)

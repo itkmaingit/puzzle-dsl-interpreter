@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "This is a language for describing puzzle rules. See Readme in root directory for more information."
 authors = ["itk"]
 packages = [
-    { include = "app"}
+    { include = "puzzle_dsl_interpreter"}
 ]
 
 [tool.poetry.dependencies]

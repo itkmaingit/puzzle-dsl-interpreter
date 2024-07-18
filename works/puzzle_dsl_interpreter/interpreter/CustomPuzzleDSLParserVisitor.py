@@ -4,9 +4,11 @@ from parser.PuzzleDSLParser import PuzzleDSLParser
 from parser.PuzzleDSLParserVisitor import PuzzleDSLParserVisitor
 
 
+# Semantics Errorの発見
 class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
     def __init__(self, parser: PuzzleDSLParser):
         self.__parser = parser
+        self.__struct_list = []
 
     def visitStructDefinitions(self, ctx: PuzzleDSLParser.StructDefinitionsContext):
         print("struct: ", ctx.getChildCount())
