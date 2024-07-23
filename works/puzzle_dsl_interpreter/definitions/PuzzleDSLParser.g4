@@ -29,19 +29,15 @@ constraintsDeclaration: CONSTRAINTS_DECLARATION;
 // Structs Context
 structID: P | C | EP | EC | NEW_STRUCT_ID;
 newStructID: NEW_STRUCT_ID;
-structDefinitonBody:
+structDefinitionBody:
 	COMBINE LPAREN structID COMMA relationshipSet RPAREN;
 structDefinition:
-	INDENT newStructID ASSIGN structDefinitonBody SEMI;
+	INDENT newStructID ASSIGN structDefinitionBody SEMI;
 structDefinitions: structDefinition*;
 
 // relationship
 relationshipID: H | V | D;
-relationshipSetBody:
-	relationshipID (COMMA relationshipID)* {
-    elements = [e.getText() for e in self._ctx.relationshipID()]
-    self.validate_relationship_set(elements)
-};
+relationshipSetBody: relationshipID (COMMA relationshipID)*;
 relationshipSet: LCURLY relationshipSetBody RCURLY;
 
 // -----------------------------------------------------------------------------------------
@@ -154,12 +150,12 @@ fillFunction:
 
 //general function
 sumFunction:
-	SUM LCURLY (generationBoundVariable COMMA)*? set (
+	SUM LCURLY (generationBoundVariable COMMA)*? BOUND_VARIABLE (
 		SUBSET
 		| IN
 	) set RCURLY LPAREN int RPAREN;
 productFunction:
-	PRODUCT LCURLY (generationBoundVariable COMMA)*? set (
+	PRODUCT LCURLY (generationBoundVariable COMMA)*? BOUND_VARIABLE (
 		SUBSET
 		| IN
 	) set RCURLY LPAREN int RPAREN;
@@ -177,8 +173,6 @@ generationSet:
 // boolean
 singleBoolBase:
 	(generationBoundVariable COMMA)*? NOT? (
-		fillFunction
-		| noOverlapFunction
 		| allDifferentFunction
 		| set (SUBSET | IN) set
 		| primitiveValue IN set
@@ -188,8 +182,10 @@ singleBoolBase:
 		| primitiveValue (NOTEQUAL | EQUAL) primitiveValue
 	);
 
-singleBool: (singleBoolBase ((THEN | EQUIVALENT) singleBool)?)
-	| LBRACKET (singleBoolBase ((THEN | EQUIVALENT) singleBool)?) RBRACKET;
+singleBool:
+	fillFunction
+	| noOverlapFunction
+	| (singleBoolBase ((THEN | EQUIVALENT) singleBool)?);
 
 // constraint definitions
 constraint: singleBool (AND singleBool)*;

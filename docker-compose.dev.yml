@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    container_name: puzzle-dsl-interpreter
     tty: true
     working_dir: /home/node/works
     volumes:

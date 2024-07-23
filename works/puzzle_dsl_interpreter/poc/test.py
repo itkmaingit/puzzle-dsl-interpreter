@@ -2,8 +2,16 @@ from __future__ import annotations
 
 import re
 
-from antlr4 import CommonTokenStream, InputStream, RecognitionException, Recognizer
+from antlr4 import (
+    CommonTokenStream,
+    InputStream,
+    RecognitionException,
+    Recognizer,
+)
 from antlr4.error.ErrorListener import ErrorListener
+from interpreter.CustomPuzzleDSLParserVisitor import (
+    CustomPuzzleDSLParserVisitor as Visitor,
+)
 from parser.PuzzleDSLLexer import PuzzleDSLLexer
 from parser.PuzzleDSLParser import PuzzleDSLParser
 from pydantic import BaseModel
@@ -78,15 +86,38 @@ def main(argv):
     if error_listener.errors:
         print(error_listener.parse_first_error_message())
     # walker = ParseTreeWalker()
-    # visitor = Visitor(parser)
+    visitor = Visitor(parser)
     # listener = Listener(parser)
 
     # result = walker.walk(listener, tree)
-    # result = visitor.visit(tree)
+    result = visitor.visit(tree)
 
 
 if __name__ == "__main__":
-    input_str = "structs:\t"
+    input_str = """
+structs:
+	A = combine ( C , { H, V } );
+	Ah = combine ( C , { H } );
+	Av = combine ( C , { V } );
+
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { 1 ... n, x } -> { 1 ... n};
+	Ep <-> { null } -> { null };
+	Ec <-> { null } -> { null };
+	A <-> { null } -> { null };
+	Ah <-> { null } -> { null };
+	Av <-> { null } -> { null };
+
+constraints:
+	n == m;
+	fill(Ah);
+	fill(Av);
+	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
+	All(av) <- B(Av), |av| == 9 && all_different(av);
+	|B(A)| == 1;
+	All(c) <- B(C), solution(c) == x <=> {c | Exists(a) <- B(A), c <- a} == None && {co <- connect(c, {H, V}) | solution(co) == x} == None;
+"""
 
     main([None, input_str])
     # main(sys.argv)

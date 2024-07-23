@@ -14,6 +14,6 @@ COPY ./works /home/"$USERNAME"/works
 
 RUN curl -o /home/node/init.sh -fL https://raw.githubusercontent.com/itkmaingit/my-config/main/init.sh --silent
 RUN echo 'bash $HOME/init.sh' >> /home/$USERNAME/.bashrc
-RUN echo 'export PYTHONPATH=/home/node/works/app' >> /home/$USERNAME/.bashrc
+RUN echo 'export PYTHONPATH=/home/node/works/puzzle_dsl_interpreter' >> /home/$USERNAME/.bashrc
 
 RUN bash /home/$USERNAME/works/setup.sh

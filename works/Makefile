@@ -20,3 +20,15 @@ run:
 .PHONY: test
 test:
 		@poetry run pytest
+
+.PHONY: all-test
+all-test:
+		bash scripts/all_test.sh
+
+.PHONY: poc
+poc:
+		@poetry run python puzzle_dsl_interpreter/poc/test.py
+
+.PHONY: output-escape-sequence
+output-escape-sequence:
+		@python3 scripts/output_escape_sequence.py

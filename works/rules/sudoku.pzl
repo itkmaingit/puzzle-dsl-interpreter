@@ -6,7 +6,7 @@ structs:
 domain-hidden:
 	P <-> { null } -> { null };
 	C <-> { 1 ... 9 } -> { 1 ... 9, undecided };
-	Ep <-> { 0, 1 } -> { null };
+	Ep <-> { null } -> { null };
 	Ec <-> { null } -> { null };
 	A <-> { null } -> { null };
 	Ah <-> { null } -> { null };
