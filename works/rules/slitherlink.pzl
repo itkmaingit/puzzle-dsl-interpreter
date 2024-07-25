@@ -9,7 +9,7 @@ domain-hidden:
 	Gp <-> { null } -> { null };
 
 constraints:
-	All(gp) <- B(Gp), All(ep) <- gp, solution(ep) == 1;
-	All(p) <- B(P), cross(p) == 2;
-	All(c) <- B(C), solution(c) == cycle(c);
+	All(gp) <- B(Gp), (All(ep) <- gp, (solution(ep) == 1));
+	All(p) <- B(P), (cross(p) == 2);
+	All(c) <- B(C), (solution(c) == cycle(c));
 	|B(Gp)| == 1;

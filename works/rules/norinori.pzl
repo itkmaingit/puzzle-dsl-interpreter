@@ -13,6 +13,6 @@ domain-hidden:
 constraints:
 	no_overlap(A1);
 	fill(A2);
-	All(c) <- B(C), solution(c) == x <=> Exists(a1) <- B(A1), c <- a1;
-	All(a1) <- B(A1), |a1| == 2;
-	All(a2) <- B(A2), |{c <- a2 | solution(c) == x}| == 2;
+	All(c) <- B(C), ([solution(c) == x] <=> [Exists(a1) <- B(A1), (c <- a1)]);
+	All(a1) <- B(A1), (|a1| == 2);
+	All(a2) <- B(A2), (|{c | c <- a2 && solution(c) == x}| == 2);

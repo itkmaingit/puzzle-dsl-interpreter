@@ -10,4 +10,4 @@ domain-hidden:
 
 constraints:
 	fill(A);
-	All(a) <- B(A), is_rectangle(a) && solution(a) == |a|;
+	All(a) <- B(A), (is_rectangle(a) && solution(a) == |a|);

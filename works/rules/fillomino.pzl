@@ -10,4 +10,4 @@ domain-hidden:
 
 constraints:
 	fill(A);
-	All(a) <- B(A), All(c) <- a, solution(a) == solution(c) && solution(a) == |a|;
+	All(a) <- B(A),( All(c) <- a, ( solution(a) == solution(c) && solution(a) == |a| ) );
