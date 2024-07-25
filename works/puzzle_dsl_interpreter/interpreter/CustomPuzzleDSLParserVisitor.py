@@ -33,13 +33,14 @@ class PuzzleDSLEvaluators:
         return True
 
     @classmethod
-    def validate_relationship_set(cls, elements):
-        if not (1 <= len(elements) <= 3):
+    def validate_relationship_set(cls, ctx: ParserRuleContext, elements):
+        if not (1 <= len(elements) <= 3):  # noqa: PLR2004
             raise InvalidRelationshipSetError(
+                ctx,
                 "The set must contain between 1 and 3 elements",
             )
         if not cls.check_unique(elements):
-            raise InvalidRelationshipSetError("Duplicate elements are not allowed")
+            raise InvalidRelationshipSetError(ctx, "Duplicate elements are not allowed")
 
 
 class PuzzleDSLOperators:
@@ -71,7 +72,9 @@ class PuzzleDSLOperators:
             return {expr}  # 数値以外の範囲はそのまま保持
 
     @classmethod
-    def is_subset(cls, domain_set: set, hidden_set: set) -> bool:
+    def is_subset(
+        cls, ctx: ParserRuleContext, domain_set: set, hidden_set: set
+    ) -> bool:
         evaluatable_hidden_set = set()
         unevaluable_terms = set()
 
@@ -89,12 +92,14 @@ class PuzzleDSLOperators:
         # 評価可能な要素のみで部分集合かどうかチェック
         if not evaluatable_hidden_set.issubset(domain_set):
             raise SubsetViolationError(
+                ctx,
                 f"Subset Error: {hidden_set} is not a subset of {domain_set}.",
             )
 
         # n または m を含む要素がある場合、警告を発する
         if unevaluable_terms:
             EvaluationError(
+                ctx,
                 f"Warning: Unable to fully evaluate expressions involving 'n' or 'm' in {unevaluable_terms}. Partial evaluation only.",
             )
 
@@ -128,8 +133,33 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
         self.__defined_structs: set = {P, C, Ep, Ec}
         self.__eval_tool = PuzzleDSLEvaluators
         self.__oper_tool = PuzzleDSLOperators
-        self.__bound_variables = set()
+        self.__bound_variables_by_index: list[str] = []
+        self.__bound_variables_by_quantifier: list[str] = []
+        self.__bound_variables_by_set: list[str] = []
         self.__defined_constants = set()
+
+    @property
+    def __bound_variables(self):
+        class BoundVariables:
+            def __init__(self, by_index, by_quantifier, by_set):
+                self.bound_variables_by_index = by_index
+                self.bound_variables_by_quantifier = by_quantifier
+                self.bound_variables_by_set = by_set
+
+            def combined(self):
+                return (
+                    self.bound_variables_by_index
+                    + self.bound_variables_by_quantifier
+                    + self.bound_variables_by_set
+                )
+
+        bound_variables = BoundVariables(
+            self.__bound_variables_by_index,
+            self.__bound_variables_by_quantifier,
+            self.__bound_variables_by_set,
+        )
+
+        return bound_variables.combined()
 
     def visitStructDefinition(self, ctx: PuzzleDSLParser.StructDefinitionContext):
         struct_token = Token(
@@ -140,6 +170,7 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
         if struct_token in self.__defined_structs:
             # 重複エラーを表示または処理
             raise DuplicationStructDefinitionError(
+                ctx,
                 f"Error: Struct ID '{struct_token.text}' is duplicated.",
             )
         # 新しいIDとして辞書に追加
@@ -149,7 +180,7 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
 
     def visitRelationshipSetBody(self, ctx: PuzzleDSLParser.RelationshipSetBodyContext):
         elements = [e.getText() for e in ctx.relationshipID()]
-        self.__eval_tool.validate_relationship_set(elements)
+        self.__eval_tool.validate_relationship_set(ctx, elements)
         return self.visitChildren(ctx)
 
     def visitDomainValue(self, ctx: PuzzleDSLParser.DomainValueContext):
@@ -170,6 +201,7 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
         if base_struct_token not in self.__defined_structs:
             # 未定義のstructがcombineに用いられている場合にエラーを吐く
             raise NotDefinitionStructError(
+                ctx,
                 f"Error: Struct ID '{base_struct_token.text}' is not defined. ",
             )
         return self.visitChildren(ctx)
@@ -195,10 +227,12 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
             )
             if undefined_structs:
                 raise ExistsUndefinedStructError(
+                    ctx,
                     f"Undefined Struct ID: {undefined_structs}",
                 )
             if insufficient_structs:
                 raise InsufficientStructError(
+                    ctx,
                     f"Insufficent Structs: {insufficient_structs}",
                 )
 
@@ -212,9 +246,10 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
         hidden_set = self.__oper_tool.extract_set(ctx.hiddenSet())
         hidden_set = {x for x in hidden_set if x != "undecided"}
         try:
-            if not self.__oper_tool.is_subset(domain_set, hidden_set):
+            if not self.__oper_tool.is_subset(ctx, domain_set, hidden_set):
                 raise SubsetViolationError(
-                    f"Warning: Hidden set {hidden_set} is not a subset of domain set {domain_set}.",
+                    ctx,
+                    f"Hidden set {hidden_set} is not a subset of domain set {domain_set}.",
                 )
         except EvaluationError as e:
             print(e)
@@ -228,6 +263,7 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
 
         if not arg_structs.issubset(self.__defined_structs):
             raise UndefinedStructError(
+                ctx,
                 f"Error: Undefined Structs: {[e.text for e in arg_structs-self.__defined_structs]}",
             )
 
@@ -241,28 +277,18 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
 
         if not arg_structs.issubset(self.__defined_structs):
             raise UndefinedStructError(
+                ctx,
                 f"Error: Undefined Structs: {[e.text for e in arg_structs-self.__defined_structs]}",
             )
-        return self.visitChildren(ctx)
-
-    def visitConstraintDefinition(
-        self,
-        ctx: PuzzleDSLParser.ConstraintDefinitionContext,
-    ):
-        self.__bound_variables = set()
-        return self.visitChildren(ctx)
-
-    def visitGenerationBoundVariable(
-        self,
-        ctx: PuzzleDSLParser.GenerationBoundVariableContext,
-    ):
-        self.__bound_variables.add(ctx.BOUND_VARIABLE().getText())
         return self.visitChildren(ctx)
 
     def visitStructElement(self, ctx: PuzzleDSLParser.StructElementContext):
         struct_element = ctx.getText()
         if struct_element not in self.__bound_variables:
-            raise UndefinedStructError(f"Undefined Variable: {struct_element}")
+            raise UndefinedStructError(
+                ctx,
+                f"Undefined Variable: {struct_element}, current bound variables are {self.__bound_variables}",
+            )
         return self.visitChildren(ctx)
 
     def visitBFunction(self, ctx: PuzzleDSLParser.BFunctionContext):
@@ -271,7 +297,7 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
             struct_id=struct_id,
         )
         if struct_token not in self.__defined_structs:
-            raise UndefinedStructError(f"{struct_id} is not defined.")
+            raise UndefinedStructError(ctx, f"{struct_id} is not defined.")
         return self.visitChildren(ctx)
 
     def visitPrimitiveValue(self, ctx: PuzzleDSLParser.PrimitiveValueContext):
@@ -280,60 +306,41 @@ class CustomPuzzleDSLParserVisitor(PuzzleDSLParserVisitor):
             token = Token(attr=TokenAttribute.CONSTANTS, text=constant_val.getText())
             if token not in self.__defined_constants:
                 raise UndefinedValueError(
+                    ctx,
                     f"constant value ({token.text}) is not undefined in domain-hidden context.",
                 )
         return self.visitChildren(ctx)
 
-    def visitSumFunction(self, ctx: PuzzleDSLParser.SumFunctionContext):
+    def visitIndex(self, ctx: PuzzleDSLParser.IndexContext):
         local_bound_variable = ctx.BOUND_VARIABLE().getText()
+        self.__bound_variables_by_index.append(local_bound_variable)
+        return self.visitChildren(ctx)
 
-        self.__bound_variables.add(local_bound_variable)
-
+    def visitQuantifierIndex(self, ctx: PuzzleDSLParser.QuantifierIndexContext):
+        local_bound_variable = ctx.quantifier().BOUND_VARIABLE().getText()
+        self.__bound_variables_by_quantifier.append(local_bound_variable)
         result = self.visitChildren(ctx)
-
-        self.__bound_variables.remove(local_bound_variable)
-
+        self.__bound_variables_by_quantifier.pop(-1)
         return result
 
-    def visitProductFunction(self, ctx: PuzzleDSLParser.ProductFunctionContext):
-        local_bound_variable = ctx.BOUND_VARIABLE().getText()
-        self.__bound_variables.add(local_bound_variable)
+    def visitIndexFunction(self, ctx: PuzzleDSLParser.IndexFunctionContext):
         result = self.visitChildren(ctx)
-        self.__bound_variables.remove(local_bound_variable)
+        self.__bound_variables_by_index.pop(-1)
         return result
 
     def visitGenerationSet(self, ctx: PuzzleDSLParser.GenerationSetContext):
         local_bound_variable = ctx.BOUND_VARIABLE().getText()
-        self.__bound_variables.add(local_bound_variable)
+        self.__bound_variables_by_set.append(local_bound_variable)
         result = self.visitChildren(ctx)
-        self.__bound_variables.remove(local_bound_variable)
+        self.__bound_variables_by_set.pop(-1)
         return result
 
-    # def visitStructDefinitions(self, ctx: PuzzleDSLParser.StructDefinitionsContext):
-    #     print("struct: ", ctx.getChildCount())
-    #     print()
-    #     for child in ctx.getChildren():
-    #         print(child.getText())
-    #     return super().visitStructDefinitions(ctx)
-
-    # def visitDomainDefinitions(self, ctx: PuzzleDSLParser.DomainDefinitionsContext):
-    #     print()
-    #     print("domain: ", ctx.getChildCount())
-    #     print()
-    #     for child in ctx.getChildren():
-    #         print(child.getText())
-    #     return super().visitStructDefinitions(ctx)
-
-    # def visitConstraintsDefinitions(
-    #     self,
-    #     ctx: PuzzleDSLParser.ConstraintsDefinitionsContext,
-    # ):
-    #     print()
-    #     print("constraints: ", ctx.getChildCount())
-    #     print()
-    #     for child in ctx.getChildren():
-    #         print(child.getText())
-    #     return super().visitConstraintsDefinitions(ctx)
+    def visitQuantifierBoolean(self, ctx: PuzzleDSLParser.QuantifierBooleanContext):
+        local_bound_variable = ctx.quantifier().BOUND_VARIABLE().getText()
+        self.__bound_variables_by_quantifier.append(local_bound_variable)
+        result = self.visitChildren(ctx)
+        self.__bound_variables_by_quantifier.pop(-1)
+        return result
 
 
 # ctx method

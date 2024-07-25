@@ -1,41 +1,53 @@
 from __future__ import annotations
 
+from antlr4 import ParserRuleContext
 
-class DuplicationStructDefinitionError(Exception):
+
+def decorate_error_message(ctx: ParserRuleContext, message):
+    return f"Column: {ctx.start.line}, {message}"
+
+
+class PuzzleDSLBaseError(Exception):
+    def __init__(self, ctx: ParserRuleContext, message: str):
+        self.message = f"Column: {ctx.start.line}, {message}"
+        super().__init__(self.message)
+
+
+class DuplicationStructDefinitionError(PuzzleDSLBaseError):
     pass
 
 
-class InvalidRelationshipSetError(Exception):
+class InvalidRelationshipSetError(PuzzleDSLBaseError):
     pass
 
 
-class NotDefinitionStructError(Exception):
+class NotDefinitionStructError(PuzzleDSLBaseError):
     pass
 
 
-class NotEnoughDomainHiddenDefinitionStructsError(Exception):
+class NotEnoughDomainHiddenDefinitionStructsError(PuzzleDSLBaseError):
     pass
 
 
-class ExistsUndefinedStructError(Exception):
+class ExistsUndefinedStructError(PuzzleDSLBaseError):
     pass
 
 
-class InsufficientStructError(Exception):
+class InsufficientStructError(PuzzleDSLBaseError):
     pass
 
 
-class SubsetViolationError(Exception):
+class SubsetViolationError(PuzzleDSLBaseError):
     pass
 
 
-class EvaluationError(Exception):
+class EvaluationError(PuzzleDSLBaseError):
     pass
 
 
-class UndefinedStructError(Exception):
+class UndefinedStructError(PuzzleDSLBaseError):
     pass
 
 
-class UndefinedValueError(Exception):
+class UndefinedValueError(PuzzleDSLBaseError):
     pass
