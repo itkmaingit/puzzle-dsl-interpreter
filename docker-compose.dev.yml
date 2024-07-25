@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: puzzle-dsl-interpreter
     tty: true
+    stdin_open: true
     working_dir: /home/node/works
     volumes:
       - ./works:/home/node/works
