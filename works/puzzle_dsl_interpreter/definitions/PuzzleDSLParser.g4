@@ -5,11 +5,6 @@ options {
 	language = Python3;
 }
 
-@members {
-from members.utils import validate_relationship_set, check_unique
-from members.domain import validate_domain_set
-}
-
 // -----------------------------------------------------------------------------------------
 
 // root context
@@ -63,11 +58,7 @@ intDomainValue:
 rangeValue: intDomainValue DOTS (intDomainValue | INF);
 domainValue: intDomainValue | rangeValue | NULL | CONSTANT_ID;
 
-domainSetBody:
-	domainValue (COMMA domainValue)* {
-    elements = [e.getText() for e in self._ctx.domainValue()]
-    self.validate_domain_set(elements)
-};
+domainSetBody: domainValue (COMMA domainValue)*;
 domainSet: LCURLY domainSetBody RCURLY;
 
 // hidden
@@ -75,11 +66,7 @@ domainSet: LCURLY domainSetBody RCURLY;
 // assignable Value (in hidden)
 hiddenValue: domainValue | UNDECIDED;
 
-hiddenSetBody:
-	hiddenValue (COMMA hiddenValue)* {
-    elements = [e.getText() for e in self._ctx.hiddenValue()]
-    self.validate_domain_set(elements)
-};
+hiddenSetBody: hiddenValue (COMMA hiddenValue)*;
 hiddenSet: LCURLY hiddenSetBody RCURLY;
 
 // definition body
@@ -119,8 +106,7 @@ int:
 	| solutionFunction
 	| crossFunction
 	| cycleFunction
-	| productFunction
-	| sumFunction
+	| indexFunction
 	| PIPE set PIPE
 	| int (PLUS | MINUS | TIMES) int;
 
@@ -148,46 +134,54 @@ noOverlapFunction:
 fillFunction:
 	FILL LPAREN newStructID (COMMA newStructID)* RPAREN;
 
-//general function
-sumFunction:
-	SUM LCURLY (generationBoundVariable COMMA)*? BOUND_VARIABLE (
-		SUBSET
-		| IN
-	) set RCURLY LPAREN int RPAREN;
-productFunction:
-	PRODUCT LCURLY (generationBoundVariable COMMA)*? BOUND_VARIABLE (
-		SUBSET
-		| IN
-	) set RCURLY LPAREN int RPAREN;
+quantifier: (ALL | EXISTS) LPAREN BOUND_VARIABLE RPAREN IN (set);
+
+index: BOUND_VARIABLE (SUBSET | IN) set;
+
+quantifierIndex:
+	quantifier COMMA LPAREN (index | quantifierIndex) RPAREN;
+
+//index function (summation or production)
+indexFunction:
+	(SUM | PRODUCT) LCURLY (index | quantifierIndex) RCURLY LPAREN int RPAREN;
 
 // generation variables
 structElement: BOUND_VARIABLE;
 
-generationBoundVariable: (ALL | EXISTS) LPAREN BOUND_VARIABLE RPAREN IN (
-		set
-	);
+generationSet: LCURLY BOUND_VARIABLE PIPE constraint RCURLY;
 
-generationSet:
-	LCURLY BOUND_VARIABLE (IN set)? PIPE constraint RCURLY;
-
-// boolean
-singleBoolBase:
-	(generationBoundVariable COMMA)*? NOT? (
-		| allDifferentFunction
-		| set (SUBSET | IN) set
-		| primitiveValue IN set
-		| isSquareFunction
-		| isRectangleFunction
-		| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
-		| primitiveValue (NOTEQUAL | EQUAL) primitiveValue
-	);
-
-singleBool:
+boolean:
 	fillFunction
 	| noOverlapFunction
-	| (singleBoolBase ((THEN | EQUIVALENT) singleBool)?);
+	| allDifferentFunction
+	| set (SUBSET | IN) set
+	| primitiveValue IN set
+	| isSquareFunction
+	| isRectangleFunction
+	| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
+	| primitiveValue (NOTEQUAL | EQUAL) primitiveValue;
+
+singleBoolean: (
+		boolean
+		| notBoolean
+		| parenthesizedBoolean
+		| quantifierBoolean
+	);
+
+notBoolean: NOT LPAREN ( singleBoolean | compoundBoolean) RPAREN;
+
+parenthesizedBoolean:
+	LBRACKET (singleBoolean | compoundBoolean) RBRACKET;
+
+quantifierBoolean:
+	quantifier COMMA LPAREN (singleBoolean | compoundBoolean) RPAREN;
+
+compoundBoolean:
+	singleBoolean (
+		(AND | OR | THEN | EQUIVALENT) (singleBoolean)
+	)*;
 
 // constraint definitions
-constraint: singleBool (AND singleBool)*;
+constraint: ( singleBoolean | compoundBoolean);
 constraintDefinition: (INDENT constraint SEMI);
 constraintsDefinitions: constraintDefinition+;

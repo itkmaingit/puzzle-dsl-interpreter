@@ -60,6 +60,7 @@ tokens {
 
 	// Logical Operator Tokens
 	AND,
+	OR,
 	NOT,
 	SUBSET,
 	IN,
@@ -180,6 +181,7 @@ INTEGER: 'N';
 EQUAL: '==';
 NOTEQUAL: '!=';
 AND: '&&';
+OR: '||';
 NOT: '!';
 IN: '<-';
 SUBSET: '<=';
