@@ -1,7 +1,3 @@
-.PHONY: install-requirements
-install-requirements:
-		bash scripts/setup_pre-commit.sh
-
 .PHONY: init
 init:
 		@pre-commit install
