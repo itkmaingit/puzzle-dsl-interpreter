@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "puzzle dsl"
+name = "puzzle dsl interpreter"
 version = "0.1.0"
 description = "This is a language for describing puzzle rules. See Readme in root directory for more information."
 authors = ["itk"]

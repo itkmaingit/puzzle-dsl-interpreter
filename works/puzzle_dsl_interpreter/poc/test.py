@@ -102,7 +102,7 @@ structs:
 
 domain-hidden:
 	P <-> { null } -> { null };
-	C <-> { 1 ... n, x } -> { 1 ... n};
+	C <-> { 1 ... 9 } -> { 1 ... 9, undecided };
 	Ep <-> { null } -> { null };
 	Ec <-> { null } -> { null };
 	A <-> { null } -> { null };
@@ -110,13 +110,7 @@ domain-hidden:
 	Av <-> { null } -> { null };
 
 constraints:
-	n == m;
-	fill(Ah);
-	fill(Av);
-	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
-	All(av) <- B(Av), |av| == 9 && all_different(av);
-	|B(A)| == 1;
-	All(c) <- B(C), solution(c) == x <=> {c | Exists(a) <- B(A), c <- a} == None && {co <- connect(c, {H, V}) | solution(co) == x} == None;
+	fill
 """
 
     main([None, input_str])

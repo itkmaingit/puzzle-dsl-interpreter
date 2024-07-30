@@ -2,24 +2,13 @@ from __future__ import annotations
 
 import sys
 
-from antlr4 import CommonTokenStream, FileStream
-from interpreter.CustomPuzzleDSLParserVisitor import (
-    CustomPuzzleDSLParserVisitor as Visitor,
-)
-from parser.PuzzleDSLLexer import PuzzleDSLLexer
-from parser.PuzzleDSLParser import PuzzleDSLParser
+from antlr4 import FileStream
+from interpreter.PuzzleDSLInterpreter import PuzzleDSLInterpreter
 
 
 def main(argv):
     input_stream = FileStream(argv[1], encoding="utf-8")
-    lexer = PuzzleDSLLexer(input_stream)
-    stream = CommonTokenStream(lexer)
-    parser = PuzzleDSLParser(stream)
-    tree = parser.file_()
-
-    visitor = Visitor(parser)
-
-    visitor.visit(tree)
+    interpreter = PuzzleDSLInterpreter(input_stream)
 
 
 if __name__ == "__main__":

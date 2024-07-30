@@ -13,9 +13,4 @@ domain-hidden:
 	Av <-> { null } -> { null };
 
 constraints:
-	fill(A);
-	fill(Ah);
-	fill(Av);
-	All(ah) <- B(Ah), (|ah| == 9 && all_different(ah));
-	All(av) <- B(Av), (|av| == 9 && all_different(av));
-	All(a) <- B(A), (|a| == 9 && all_different(a) && is_square(a));
+	All(a) <- B(Q), (is_rectangle(a));

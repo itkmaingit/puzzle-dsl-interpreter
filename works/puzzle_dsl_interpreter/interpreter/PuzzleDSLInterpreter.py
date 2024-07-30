@@ -23,6 +23,32 @@ class SyntaxErrorModel(BaseModel):
     msg: str
 
 
+class CustomErrorListener2(ErrorListener):
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        currentContext = recognizer._ctx
+        expected_tokens = recognizer.getExpectedTokens().toString(
+            recognizer.literalNames,
+            recognizer.symbolicNames,
+        )
+        # 現在のコンテキストから次の可能なコンテキストを取得
+        nextContexts = self.getNextContexts(recognizer)
+        print(
+            f"Syntax error at line {line}:{column}. Next possible contexts: {nextContexts}",
+        )
+        print(f"Expected tokens: {expected_tokens}")
+
+    def getNextContexts(self, recognizer):
+        atn = recognizer.atn
+        currentState = atn.states[recognizer.state]
+        nextContexts = []
+        for transition in currentState.transitions:
+            if hasattr(transition.target, "ruleIndex"):
+                ruleName = recognizer.ruleNames[transition.target.ruleIndex]
+                if ruleName not in nextContexts:
+                    nextContexts.append(ruleName)
+        return nextContexts
+
+
 class CustomErrorListener(ErrorListener):
     def __init__(self):
         super().__init__()
@@ -80,7 +106,7 @@ class PuzzleDSLInterpreter:
         self.__stream = CommonTokenStream(self.__lexer)
         self.__parser = PuzzleDSLParser(self.__stream)
         self.__parser.removeErrorListeners()  # 既存のエラーリスナーを削除
-        error_listener = CustomErrorListener()
+        error_listener = CustomErrorListener2()
         self.__parser.addErrorListener(error_listener)  # カスタムエラーリスナーを追加
         tree = self.__parser.file_()
 
