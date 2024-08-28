@@ -5,15 +5,13 @@ RUN apt update && \
 ENV SHELL bash
 ARG USERNAME=node
 RUN mkdir -p /scripts
-RUN curl -o /scripts/setup_user.sh -fL https://raw.githubusercontent.com/itkmaingit/my-config/main/setup_user.sh --silent
+RUN curl -o /scripts/setup_user.sh -fL https://raw.githubusercontent.com/itkmaingit/my-config/main/docker/setup_user.sh --silent
 RUN bash /scripts/setup_user.sh $USERNAME
 
 USER $USERNAME
 WORKDIR /home/"$USERNAME"/works
 COPY ./works /home/"$USERNAME"/works
 
-RUN curl -o /home/node/init.sh -fL https://raw.githubusercontent.com/itkmaingit/my-config/main/init.sh --silent
-RUN echo 'bash $HOME/init.sh' >> /home/$USERNAME/.bashrc
 RUN echo 'export PYTHONPATH=/home/node/works/puzzle_dsl_interpreter' >> /home/$USERNAME/.bashrc
 
-RUN bash /home/$USERNAME/works/setup.sh
+RUN bash /home/$USERNAME/works/setup.sh $USERNAME

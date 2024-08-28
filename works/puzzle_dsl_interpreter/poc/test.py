@@ -9,9 +9,7 @@ from antlr4 import (
     Recognizer,
 )
 from antlr4.error.ErrorListener import ErrorListener
-from interpreter.CustomPuzzleDSLParserVisitor import (
-    CustomPuzzleDSLParserVisitor as Visitor,
-)
+from generator.PuzzleDSLRandomGenerator import CustomVisitor
 from parser.PuzzleDSLLexer import PuzzleDSLLexer
 from parser.PuzzleDSLParser import PuzzleDSLParser
 from pydantic import BaseModel
@@ -86,31 +84,20 @@ def main(argv):
     if error_listener.errors:
         print(error_listener.parse_first_error_message())
     # walker = ParseTreeWalker()
-    visitor = Visitor(parser)
+    # visitor = Visitor(parser)
+    c_visitor = CustomVisitor()
     # listener = Listener(parser)
 
     # result = walker.walk(listener, tree)
-    result = visitor.visit(tree)
+    # result = visitor.visit(tree)
+    result = c_visitor.visit(tree)
 
 
 if __name__ == "__main__":
     input_str = """
 structs:
 	A = combine ( C , { H, V } );
-	Ah = combine ( C , { H } );
-	Av = combine ( C , { V } );
-
-domain-hidden:
-	P <-> { null } -> { null };
-	C <-> { 1 ... 9 } -> { 1 ... 9, undecided };
-	Ep <-> { null } -> { null };
-	Ec <-> { null } -> { null };
-	A <-> { null } -> { null };
-	Ah <-> { null } -> { null };
-	Av <-> { null } -> { null };
-
-constraints:
-	fill
+    B = combine
 """
 
     main([None, input_str])
