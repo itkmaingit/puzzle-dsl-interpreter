@@ -1,140 +1,135 @@
 from __future__ import annotations
 
-import sys
-from collections.abc import Callable
-from random import choice, choices, randint
+import random
 
-from generator.constants import C, Ec, Ep, P
-from generator.token import Token, TokenType
-from pydantic import BaseModel
-
-Func = Callable[..., list[Token]]
-F_T = Func | Token
+from generator.definitions.rules import AlternativeRule, OrderRule
+from generator.helpers import token
+from generator.helpers.instant_rule import P_M_T, W_H
 
 
-class Range(BaseModel):
-    min: int = 1
-    max: int = 1
-
-    def decline(self):
-        self.max = max(min - 1, max - 1)
-
-    def callable(self) -> bool:
-        return min <= max
-
-    def clone(self) -> Range:
-        return Range(min=self.min, max=self.max)
-
-    def dec_clone(self) -> Range:
-        return Range(min=self.min, max=self.max - 1)
-
-
-class OrComp(BaseModel):
-    cands: set[Comp]
-
-    def exec(self) -> list[Token]:
-        result: list[Token] = []
-        for _ in randint(min, max):
-            # 各候補の重みに基づいて一つを確率的に選択
-            # https://magazine.techacademy.jp/magazine/33531
-            chosen_comp = choices(
-                list(self.cands),
-                weights=[1 / comp.weight for comp in self.cands],
-                k=1,
-            )[0]
-
-            # 選択されたコンポーネントを実行
-            result.extend(chosen_comp.exec())
-        return result
-
-
-class Comp(BaseModel):
-    el: F_T
-    weight: int = 1
-    limit: Range = Range()
-
-    def exec(self) -> list[Token]:
-        self.weight += 1
-        if callable(self.el):
-            return self.el()  # Callableを実行した場合、その結果を返す
-        return [self.el]  # Tokenをリストとして返す
-
-    def decline(self):
-        self.limit.decline()
-        if not self.limit.callable():
-            self.weight = sys.maxsize
-
-
-class PuzzleDSLGenerator:
+class File(OrderRule):
     def __init__(self):
-        self.__defined_structs: set = {P, C, Ep, Ec}
-        self.__bound_variables_by_index: list[str] = []
-        self.__bound_variables_by_quantifier: list[str] = []
-        self.__bound_variables_by_set: list[str] = []
-        self.__defined_constants = set()
+        order = [token.StructsDeclaration()]
+        super().__init__(order=order)
 
-    def __expand_tokens(
-        items: list[OrComp],
-    ) -> list[Token]:
-        result: list[Token] = []
-        for item in items:
-            if isinstance(
-                item,
-                Callable,
-            ):  # callable(item) だと厳密ではないため isinstance を使用
-                result.extend(item())  # Execute the function and collect its results
-            elif isinstance(item, Token):
-                result.append(item)  # Append the token directly
-            else:
-                raise TypeError("List should only contain functions or Tokens")
-        return result
 
-    def generate(self) -> list[Token]:
-        return self.__expand_tokens([])
+class IntDomainValue(AlternativeRule):
+    DEPTH_LIMIT = 10
 
-    def __generateFile(self) -> list[Token]:
-        lst = [
-            self.__generateStructsDeclaration,
-            Token(type=TokenType.NEWLINE),
-            self.__generateStructDefinitions,
-            self.__generateDomainHiddenDeclaration,
-            self.__generateDomainDefinitions,
-            self.__generateConstraintsDeclaration,
-            self.__generateConstraintsDefinitions,
-        ]
-        return self.__expand_tokens(lst)
-
-    def __generateStructsDeclaration(self) -> list[Token]:
-        return Token(type=TokenType.STRUCTS_DECLARATION)
-
-    def __generateStructDefinitions(self) -> list[Token]:
-        pass
-
-    def __generateIntDomainValue(self, limit: Range) -> Callable[[], list[F_T]]:
-        def wrapper() -> list[F_T]:
-            def w_h():
-                w = Comp(el=Token(TokenType.WIDTH))
-                h = Comp(el=Token(TokenType.HEIGHT))
-                return OrComp(set(w, h))
-
-            def p_m_t():
-                p = Comp(el=Token(TokenType.PLUS))
-                m = Comp(el=Token(TokenType.MINUS))
-                t = Comp(el=Token(TokenType.TIMES))
-                return OrComp(p, m, t)
-
-            choice_1 = [w_h, p_m_t, w_h]
-            choice_2 = [
-                w_h,
-                p_m_t,
-                lambda _: OrComp(
-                    Comp(el=self.__generateIntDomainValue, limit=limit.dec_clone()),
-                ),
+    def __init__(self, depth: int = 0):
+        if depth >= self.DEPTH_LIMIT:
+            # 再帰深度が上限に達したら、再帰しない選択肢のみを使用
+            choices = [
+                IntDomainValue_1(),
+                token.Width(),
+                token.Height(),
+                token.Number(),
             ]
+        else:
+            # 再帰の深さに応じて、再帰的選択肢を加える
+            choices = [
+                IntDomainValue_1(),
+                IntDomainValue_2(depth + 1)
+                if random.random() > depth / self.DEPTH_LIMIT
+                else token.Number(),
+                token.Width(),
+                token.Height(),
+                IntDomainValue_5(depth + 1)
+                if random.random() > depth / self.DEPTH_LIMIT
+                else token.Number(),
+                token.Number(),
+            ]
+        super().__init__(choices)
 
-            return choice([choice_1, choice_2])
 
-        return wrapper
+class IntDomainValue_1(OrderRule):
+    def __init__(self):
+        order = [W_H(), P_M_T(), W_H()]
+        super().__init__(order)
+
+
+class IntDomainValue_2(OrderRule):
+    def __init__(self, depth):
+        order = [W_H(), P_M_T(), IntDomainValue(depth)]
+        super().__init__(order)
+
+
+class IntDomainValue_5(OrderRule):
+    def __init__(self, depth: int):
+        order = [IntDomainValue(depth), P_M_T(), W_H()]
+        super().__init__(order)
+
+
+# class PuzzleDSLGenerator:
+#     def __init__(self):
+#         self.__defined_structs: set = {P, C, Ep, Ec}
+#         self.__bound_variables_by_index: list[str] = []
+#         self.__bound_variables_by_quantifier: list[str] = []
+#         self.__bound_variables_by_set: list[str] = []
+#         self.__defined_constants = set()
+
+#     def __expand_tokens(
+#         items: list[OrComp],
+#     ) -> list[Token]:
+#         result: list[Token] = []
+#         for item in items:
+#             if isinstance(
+#                 item,
+#                 Callable,
+#             ):  # callable(item) だと厳密ではないため isinstance を使用
+#                 result.extend(item())  # Execute the function and collect its results
+#             elif isinstance(item, Token):
+#                 result.append(item)  # Append the token directly
+#             else:
+#                 raise TypeError("List should only contain functions or Tokens")
+#         return result
+
+#     def generate(self) -> list[Token]:
+#         return self.__expand_tokens([])
+
+#     def __generateFile(self) -> list[Token]:
+#         lst = [
+#             self.__generateStructsDeclaration,
+#             Token(type=TokenType.NEWLINE),
+#             self.__generateStructDefinitions,
+#             self.__generateDomainHiddenDeclaration,
+#             self.__generateDomainDefinitions,
+#             self.__generateConstraintsDeclaration,
+#             self.__generateConstraintsDefinitions,
+#         ]
+#         return self.__expand_tokens(lst)
+
+#     def __generateStructsDeclaration(self) -> list[Token]:
+#         return Token(type=TokenType.STRUCTS_DECLARATION)
+
+#     def __generateStructDefinitions(self) -> list[Token]:
+#         pass
+
+#     def __generateIntDomainValue(self, limit: Range) -> Callable[[], list[F_T]]:
+#         def wrapper() -> list[F_T]:
+#             def w_h():
+#                 w = Comp(el=Token(TokenType.WIDTH))
+#                 h = Comp(el=Token(TokenType.HEIGHT))
+#                 return OrComp(set(w, h))
+
+#             def p_m_t():
+#                 p = Comp(el=Token(TokenType.PLUS))
+#                 m = Comp(el=Token(TokenType.MINUS))
+#                 t = Comp(el=Token(TokenType.TIMES))
+#                 return OrComp(p, m, t)
+
+#             choice_1 = [w_h, p_m_t, w_h]
+#             choice_2 = [
+#                 w_h,
+#                 p_m_t,
+#                 lambda _: OrComp(
+#                     Comp(el=self.__generateIntDomainValue, limit=limit.dec_clone()),
+#                 ),
+#             ]
+
+#             return choice([choice_1, choice_2])
+
+#         return wrapper
 
 
 # class CustomVisitor(PuzzleDSLParserVisitor):

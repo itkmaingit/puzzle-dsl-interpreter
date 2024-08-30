@@ -15,7 +15,6 @@ class Token(BaseModel):
             pattern = TOKEN_PATTERNS.get(type)
             if pattern is None:
                 raise ValueError(f"No pattern found for token type: {type}")
-            # hypothesisを使用してランダムな文字列を生成
             text = rstr.xeger(pattern)
         super().__init__(type=type, text=text)
 
@@ -110,7 +109,7 @@ TOKEN_PATTERNS = {
     TokenType.V: r"^V$",
     TokenType.D: r"^D$",
     TokenType.COMBINE: r"^combine$",
-    TokenType.NUMBER: r"^([1-9][0-9]?|0)$",
+    TokenType.NUMBER: r"^([1-9][0-9]|[0-9])$",
     TokenType.CONSTANT_ID: r"^x(_\d)?$",
     TokenType.DOTS: r"^\.\.\.$",
     TokenType.RIGHT_ARROW: r"^->$",

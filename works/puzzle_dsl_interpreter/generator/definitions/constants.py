@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generator.token import Token, TokenType
+from generator.definitions.token import Token, TokenType
 
 P = Token(type=TokenType.P)
 C = Token(type=TokenType.C)
