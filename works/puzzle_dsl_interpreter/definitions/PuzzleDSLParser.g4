@@ -168,13 +168,12 @@ singleBoolean: (
 		| quantifierBoolean
 	);
 
-notBoolean: NOT LPAREN ( singleBoolean | compoundBoolean) RPAREN;
+notBoolean: NOT LPAREN compoundBoolean RPAREN;
 
-parenthesizedBoolean:
-	LBRACKET (singleBoolean | compoundBoolean) RBRACKET;
+parenthesizedBoolean: LBRACKET compoundBoolean RBRACKET;
 
 quantifierBoolean:
-	quantifier COMMA LPAREN (singleBoolean | compoundBoolean) RPAREN;
+	quantifier COMMA LPAREN compoundBoolean RPAREN;
 
 compoundBoolean:
 	singleBoolean (
@@ -182,6 +181,6 @@ compoundBoolean:
 	)*;
 
 // constraint definitions
-constraint: ( singleBoolean | compoundBoolean);
+constraint: compoundBoolean;
 constraintDefinition: (INDENT constraint SEMI);
 constraintsDefinitions: constraintDefinition+;
