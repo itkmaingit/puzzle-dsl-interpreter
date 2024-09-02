@@ -11,8 +11,8 @@ packages = [
 python = "^3.12"
 pydantic = "^2.7.4"
 antlr4-python3-runtime = "^4.13.1"
-hypothesis = "^6.111.2"
-rstr = "^3.2.2"
+exrex = "^0.11.0"
+numpy = "^2.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
