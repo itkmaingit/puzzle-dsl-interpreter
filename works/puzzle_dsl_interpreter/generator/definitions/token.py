@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+import re
 from enum import IntEnum, auto
 
 import exrex
@@ -10,12 +12,22 @@ class Token(BaseModel):
     type: TokenType
     text: str
 
-    def __init__(self, type: TokenType, text: str | None = None) -> Token:
-        if text is None:
-            pattern = TOKEN_PATTERNS.get(type)
-            if pattern is None:
-                raise ValueError(f"No pattern found for token type: {type}")
-            text = exrex.getone(pattern)
+    def __init__(
+        self,
+        type: TokenType,
+        ok: list[str] | None = None,
+        ng: list[str] | None = None,
+    ) -> Token:
+        pattern = self.__get_pattern(type)
+        if ok:
+            text = random.choice(ok)
+        else:
+            in_ng = True
+            while in_ng:
+                text = exrex.getone(pattern)
+                in_ng = text in ng
+        if not re.match(pattern, text):
+            raise ValueError("Tokenの文字列が不正です。")
         super().__init__(type=type, text=text)
 
     def __eq__(self, other) -> bool:
@@ -25,6 +37,22 @@ class Token(BaseModel):
 
     def __hash__(self) -> int:
         return hash((self.type, self.text))
+
+    # def re_lottery(self):
+    #     pattern = self.__get_pattern(self.type)
+    #     self.text = exrex.getone(pattern)
+
+    # def re_construct(self, text: str):
+    #     pattern = self.__get_pattern(self.type)
+    #     if not re.match(pattern, text):
+    #         raise ValueError("Tokenの文字列が不正です。")
+    #     self.text = text
+
+    def __get_pattern(self, type: TokenType):
+        pattern = TOKEN_PATTERNS.get(type)
+        if pattern is None:
+            raise ValueError(f"No pattern found for token type: {type}")
+        return pattern
 
 
 class TokenType(IntEnum):
@@ -36,9 +64,7 @@ class TokenType(IntEnum):
     EP = auto()
     EC = auto()
     NEW_STRUCT_ID = auto()
-    H = auto()
-    V = auto()
-    D = auto()
+    RELATIONSHIP_ID = auto()
     COMBINE = auto()
     NUMBER = auto()
     CONSTANT_ID = auto()
@@ -105,9 +131,7 @@ TOKEN_PATTERNS = {
     TokenType.EP: r"^Ep$",
     TokenType.EC: r"^Ec$",
     TokenType.NEW_STRUCT_ID: r"^[ADFGI-MOQ-UW-Z][0-9a-z]?$",
-    TokenType.H: r"^H$",
-    TokenType.V: r"^V$",
-    TokenType.D: r"^D$",
+    TokenType.RELATIONSHIP_ID: r"^[HVD]$",
     TokenType.COMBINE: r"^combine$",
     TokenType.NUMBER: r"^([1-9][0-9]|[0-9])$",
     TokenType.CONSTANT_ID: r"^x(_\d)?$",
