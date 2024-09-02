@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import random
 from abc import ABC, abstractmethod
 from enum import IntEnum, auto
-from random import choices, randint
 
+import numpy as np
 from generator.definitions.errors import (
     NotGivenChoicesError,
     NotGivenOrderError,
@@ -15,73 +16,75 @@ from pydantic import BaseModel
 
 
 class BaseRule(ABC):
-    def __init__(self, weight: int = 1):
-        self.weight = weight
+    WEIGHT = 1
 
-    @classmethod
     @abstractmethod
-    def generate(cls) -> list[Token]:
+    def __init__(self):
         pass
 
-
-# 生Token
-class RawToken(BaseRule):
-    def __init__(self, token: Token | None = None, weight: int = 1):
-        if token is None:
-            raise NotGivenTokenError("Tokenが与えられていません。")
-        self.__token = token
-        super().__init__(weight=weight)
-
+    @abstractmethod
     def generate(self) -> list[Token]:
-        return [self.__token]
+        pass
 
 
 class Range(BaseModel):
     min: int = 1
     max: int = 1
 
-    def decline(self):
-        self.max = max(min - 1, max - 1)
+    def generate(self) -> range:
+        # 範囲の差を取得
+        range_diff = self.max - self.min + 1
 
-    def callable(self) -> bool:
-        return min <= max
+        # 重みを計算(minに近いほど重い)
+        weights = [1 / (x + 1) ** 2 for x in range(range_diff)]
+        total_weight = sum(weights)
 
-    def clone(self) -> Range:
-        return Range(min=self.min, max=self.max)
+        # 正規化された重みを使用してランダムな値を選択
+        chosen_weight = random.uniform(0, total_weight)
+        cumulative_weight = 0
+        for i, weight in enumerate(weights):
+            cumulative_weight += weight
+            if cumulative_weight >= chosen_weight:
+                return range(self.min + i)
 
-    def dec_clone(self) -> Range:
-        return Range(min=self.min, max=self.max - 1)
+        return range(self.min)
+
+
+# 生Token
+class RawToken(BaseRule):
+    def __init__(self, token: Token):
+        if token is None:
+            raise NotGivenTokenError("Tokenが与えられていません。")
+        self.__token = token
+
+    def generate(self) -> list[Token]:
+        return [self.__token]
 
 
 # or実行
 class AlternativeRule(BaseRule):
-    def __init__(self, choices: set[BaseRule] | None = None, weight: int = 1):
+    def __init__(self, choices: list[type[BaseRule]]):
         if choices is None:
             raise NotGivenChoicesError(
                 "選択肢となるset[BaseRule]が初期化されていません。",
             )
-        self.__choices = choices
-        super().__init__(weight=weight)
+        weights = [1 / choice.WEIGHT for choice in choices]
+        weights_normalized = np.array(weights) / sum(weights)
+        rng = np.random.default_rng()
+        choice = rng.choice(choices, p=weights_normalized)
+        choice.WEIGHT += 1
+        self.__choice = choice
 
     def generate(self) -> list[Token]:
-        # 各候補の重みに基づいて一つを確率的に選択
-        # https://magazine.techacademy.jp/magazine/33531
-        chosen_rule = choices(
-            list(self.__choices),
-            weights=[1 / choice.weight for choice in self.__choices],
-            k=1,
-        )[0]
-        chosen_rule.weight += 1
-        return chosen_rule.generate()
+        return self.__choice().generate()
 
 
 # 複数回実行
 class MultipleRule(BaseRule):
     def __init__(
         self,
-        rule: BaseRule | None = None,
-        range: Range | None = None,
-        weight: int = 1,
+        rule: type[BaseRule],
+        range: Range,
     ):
         if rule is None:
             raise NotGivenRuleError("複数回実行するBaseRuleが与えられていません。")
@@ -89,12 +92,11 @@ class MultipleRule(BaseRule):
             range = Range(min=1, max=1)
         self.__rule = rule
         self.__range = range
-        super().__init__(weight=weight)
 
     def generate(self) -> list[Token]:
         result: list[Token] = []
-        for _ in randint(self.__range.min, self.__range.max):
-            result.extend(self.__rule.generate())
+        for _ in self.__range.generate():
+            result.extend(self.__rule().generate())
         return result
 
 
@@ -102,13 +104,11 @@ class MultipleRule(BaseRule):
 class OrderRule(BaseRule):
     def __init__(
         self,
-        order: list[BaseRule] | None = None,
-        weight: int = 1,
+        order: list[type[BaseRule]],
     ):
         if order is None:
             raise NotGivenOrderError("直列実行するset[BaseRule]が与えられていません。")
-        self.__order = order
-        super().__init__(weight=weight)
+        self.__order: list[type[BaseRule]] = order
 
     def generate(
         self,
@@ -116,8 +116,8 @@ class OrderRule(BaseRule):
         result: list[Token] = []
         for rule in self.__order:
             result.extend(
-                rule.generate(),
-            )  # Execute the function and collect its results
+                rule().generate(),
+            )
 
         return result
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import IntEnum, auto
 
-import rstr
+import exrex
 from pydantic import BaseModel
 
 
@@ -15,7 +15,7 @@ class Token(BaseModel):
             pattern = TOKEN_PATTERNS.get(type)
             if pattern is None:
                 raise ValueError(f"No pattern found for token type: {type}")
-            text = rstr.xeger(pattern)
+            text = exrex.getone(pattern)
         super().__init__(type=type, text=text)
 
     def __eq__(self, other) -> bool:

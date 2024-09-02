@@ -1,456 +1,830 @@
 from __future__ import annotations
 
-import random
-
-from generator.definitions.rules import AlternativeRule, OrderRule
+from generator.definitions.rules import (
+    AlternativeRule,
+    MultipleRule,
+    OrderRule,
+    Range,
+    RawToken,
+)
+from generator.definitions.token import Token, TokenType
 from generator.helpers import token
-from generator.helpers.instant_rule import P_M_T, W_H
 
 
 class File(OrderRule):
     def __init__(self):
-        order = [token.StructsDeclaration()]
+        order = [
+            StructsDeclaration,
+            StructDefinitions,
+            DomainHiddenDeclaration,
+            DomainDefinitions,
+            ConstraintsDeclaration,
+            ConstraintsDefinitions,
+        ]
         super().__init__(order=order)
 
 
-class IntDomainValue(AlternativeRule):
-    DEPTH_LIMIT = 10
+class StructsDeclaration(OrderRule):
+    def __init__(self):
+        order = [token.StructsDeclaration, token.Newline]
+        super().__init__(order=order)
 
-    def __init__(self, depth: int = 0):
-        if depth >= self.DEPTH_LIMIT:
-            # 再帰深度が上限に達したら、再帰しない選択肢のみを使用
-            choices = [
-                IntDomainValue_1(),
-                token.Width(),
-                token.Height(),
-                token.Number(),
-            ]
-        else:
-            # 再帰の深さに応じて、再帰的選択肢を加える
-            choices = [
-                IntDomainValue_1(),
-                IntDomainValue_2(depth + 1)
-                if random.random() > depth / self.DEPTH_LIMIT
-                else token.Number(),
-                token.Width(),
-                token.Height(),
-                IntDomainValue_5(depth + 1)
-                if random.random() > depth / self.DEPTH_LIMIT
-                else token.Number(),
-                token.Number(),
-            ]
+
+class DomainHiddenDeclaration(OrderRule):
+    def __init__(self):
+        order = [token.DomainHiddenDeclaration, token.Newline]
+        super().__init__(order=order)
+
+
+class ConstraintsDeclaration(OrderRule):
+    def __init__(self):
+        order = [token.ConstraintsDeclaration, token.Newline]
+        super().__init__(order=order)
+
+
+class StructId(AlternativeRule):
+    def __init__(self):
+        choices = [
+            token.P,
+            token.C,
+            token.EP,
+            token.EC,
+            token.NewStructId,
+        ]
+        super().__init__(choices=choices)
+
+
+class StructDefinitionBody(OrderRule):
+    def __init__(self):
+        order = [
+            token.Combine,
+            token.LParen,
+            StructId,
+            token.Comma,
+            RelationshipSet,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class StructDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.NewStructId,
+            token.Assign,
+            StructDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+    def generate(self):
+        super().generate()
+
+
+class StructDefinitions(MultipleRule):
+    def __init__(self):
+        range = Range(min=1, max=3)
+        rule = StructDefinition
+        super().__init__(rule=rule, range=range)
+
+
+class RelationshipId(AlternativeRule):
+    def __init__(self):
+        choices = [
+            token.H,
+            token.V,
+            token.D,
+        ]
+        super().__init__(choices=choices)
+
+
+class RelationshipSetBody(OrderRule):
+    class AdditionalRelationshipId(MultipleRule):
+        class RelationshipIdWithComma(OrderRule):
+            def __init__(self):
+                order = [token.Comma, RelationshipId]
+                super().__init__(order=order)
+
+        def __init__(self):
+            rule = self.RelationshipIdWithComma
+            range = Range(min=1, max=3)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            RelationshipId,
+            self.AdditionalRelationshipId,
+        ]
+        super().__init__(order=order)
+
+
+class RelationshipSet(OrderRule):
+    def __init__(self):
+        order = [
+            token.LCurly,
+            RelationshipSetBody,
+            token.RCurly,
+        ]
+        super().__init__(order=order)
+
+
+# FIXME: 出現確率に偏りがある(Numberが出ない)
+class IntDomainValue(AlternativeRule):
+    def __init__(self):
+        choices = [
+            self.IntDomainValue_1,
+            self.IntDomainValue_2,
+            token.Width,
+            token.Height,
+            self.IntDomainValue_5,
+            token.Number,
+        ]
         super().__init__(choices)
 
+    class W_H(AlternativeRule):
+        def __init__(self):
+            choices = [token.Width, token.Height]
+            super().__init__(choices)
 
-class IntDomainValue_1(OrderRule):
+    class P_M_T(AlternativeRule):
+        def __init__(self):
+            choices = [token.Plus, token.Minus, token.Times]
+            super().__init__(choices)
+
+    class IntDomainValue_1(OrderRule):
+        def __init__(self):
+            order = [IntDomainValue.W_H, IntDomainValue.P_M_T, IntDomainValue.W_H]
+            super().__init__(order=order)
+
+    class IntDomainValue_2(OrderRule):
+        def __init__(self):
+            order = [
+                IntDomainValue.W_H,
+                IntDomainValue.P_M_T,
+                IntDomainValue,
+            ]
+            super().__init__(order=order)
+
+    class IntDomainValue_5(OrderRule):
+        def __init__(self):
+            order = [
+                IntDomainValue,
+                IntDomainValue.P_M_T,
+                IntDomainValue.W_H,
+            ]
+            super().__init__(order=order)
+
+
+class RangeValue(OrderRule):
+    class EndRangeValue(AlternativeRule):
+        def __init__(self):
+            choices = [
+                IntDomainValue,
+                token.Inf,
+            ]
+            super().__init__(choices=choices)
+
     def __init__(self):
-        order = [W_H(), P_M_T(), W_H()]
-        super().__init__(order)
-
-
-class IntDomainValue_2(OrderRule):
-    def __init__(self, depth):
-        order = [W_H(), P_M_T(), IntDomainValue(depth)]
-        super().__init__(order)
-
-
-class IntDomainValue_5(OrderRule):
-    def __init__(self, depth: int):
-        order = [IntDomainValue(depth), P_M_T(), W_H()]
-        super().__init__(order)
-
-
-# class PuzzleDSLGenerator:
-#     def __init__(self):
-#         self.__defined_structs: set = {P, C, Ep, Ec}
-#         self.__bound_variables_by_index: list[str] = []
-#         self.__bound_variables_by_quantifier: list[str] = []
-#         self.__bound_variables_by_set: list[str] = []
-#         self.__defined_constants = set()
-
-#     def __expand_tokens(
-#         items: list[OrComp],
-#     ) -> list[Token]:
-#         result: list[Token] = []
-#         for item in items:
-#             if isinstance(
-#                 item,
-#                 Callable,
-#             ):  # callable(item) だと厳密ではないため isinstance を使用
-#                 result.extend(item())  # Execute the function and collect its results
-#             elif isinstance(item, Token):
-#                 result.append(item)  # Append the token directly
-#             else:
-#                 raise TypeError("List should only contain functions or Tokens")
-#         return result
-
-#     def generate(self) -> list[Token]:
-#         return self.__expand_tokens([])
-
-#     def __generateFile(self) -> list[Token]:
-#         lst = [
-#             self.__generateStructsDeclaration,
-#             Token(type=TokenType.NEWLINE),
-#             self.__generateStructDefinitions,
-#             self.__generateDomainHiddenDeclaration,
-#             self.__generateDomainDefinitions,
-#             self.__generateConstraintsDeclaration,
-#             self.__generateConstraintsDefinitions,
-#         ]
-#         return self.__expand_tokens(lst)
-
-#     def __generateStructsDeclaration(self) -> list[Token]:
-#         return Token(type=TokenType.STRUCTS_DECLARATION)
-
-#     def __generateStructDefinitions(self) -> list[Token]:
-#         pass
-
-#     def __generateIntDomainValue(self, limit: Range) -> Callable[[], list[F_T]]:
-#         def wrapper() -> list[F_T]:
-#             def w_h():
-#                 w = Comp(el=Token(TokenType.WIDTH))
-#                 h = Comp(el=Token(TokenType.HEIGHT))
-#                 return OrComp(set(w, h))
-
-#             def p_m_t():
-#                 p = Comp(el=Token(TokenType.PLUS))
-#                 m = Comp(el=Token(TokenType.MINUS))
-#                 t = Comp(el=Token(TokenType.TIMES))
-#                 return OrComp(p, m, t)
-
-#             choice_1 = [w_h, p_m_t, w_h]
-#             choice_2 = [
-#                 w_h,
-#                 p_m_t,
-#                 lambda _: OrComp(
-#                     Comp(el=self.__generateIntDomainValue, limit=limit.dec_clone()),
-#                 ),
-#             ]
-
-#             return choice([choice_1, choice_2])
-
-#         return wrapper
-
-
-# class CustomVisitor(PuzzleDSLParserVisitor):
-#     # Visit a parse tree produced by PuzzleDSLParser#file.
-#     def visitFile(self, ctx: PuzzleDSLParser.FileContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structsDeclaration.
-#     def visitStructsDeclaration(self, ctx: PuzzleDSLParser.StructsDeclarationContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainHiddenDeclaration.
-#     def visitDomainHiddenDeclaration(
-#         self,
-#         ctx: PuzzleDSLParser.DomainHiddenDeclarationContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#constraintsDeclaration.
-#     def visitConstraintsDeclaration(
-#         self,
-#         ctx: PuzzleDSLParser.ConstraintsDeclarationContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structID.
-#     def visitStructID(self, ctx: PuzzleDSLParser.StructIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#newStructID.
-#     def visitNewStructID(self, ctx: PuzzleDSLParser.NewStructIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structDefinitionBody.
-#     def visitStructDefinitionBody(
-#         self,
-#         ctx: PuzzleDSLParser.StructDefinitionBodyContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structDefinition.
-#     def visitStructDefinition(self, ctx: PuzzleDSLParser.StructDefinitionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structDefinitions.
-#     def visitStructDefinitions(self, ctx: PuzzleDSLParser.StructDefinitionsContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#relationshipID.
-#     def visitRelationshipID(self, ctx: PuzzleDSLParser.RelationshipIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#relationshipSetBody.
-#     def visitRelationshipSetBody(self, ctx: PuzzleDSLParser.RelationshipSetBodyContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#relationshipSet.
-#     def visitRelationshipSet(self, ctx: PuzzleDSLParser.RelationshipSetContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#pID.
-#     def visitPID(self, ctx: PuzzleDSLParser.PIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#cID.
-#     def visitCID(self, ctx: PuzzleDSLParser.CIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#epID.
-#     def visitEpID(self, ctx: PuzzleDSLParser.EpIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#ecID.
-#     def visitEcID(self, ctx: PuzzleDSLParser.EcIDContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#intDomainValue.
-#     def visitIntDomainValue(self, ctx: PuzzleDSLParser.IntDomainValueContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#rangeValue.
-#     def visitRangeValue(self, ctx: PuzzleDSLParser.RangeValueContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainValue.
-#     def visitDomainValue(self, ctx: PuzzleDSLParser.DomainValueContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainSetBody.
-#     def visitDomainSetBody(self, ctx: PuzzleDSLParser.DomainSetBodyContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainSet.
-#     def visitDomainSet(self, ctx: PuzzleDSLParser.DomainSetContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#hiddenValue.
-#     def visitHiddenValue(self, ctx: PuzzleDSLParser.HiddenValueContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#hiddenSetBody.
-#     def visitHiddenSetBody(self, ctx: PuzzleDSLParser.HiddenSetBodyContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#hiddenSet.
-#     def visitHiddenSet(self, ctx: PuzzleDSLParser.HiddenSetContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainDefinitionBody.
-#     def visitDomainDefinitionBody(
-#         self,
-#         ctx: PuzzleDSLParser.DomainDefinitionBodyContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#pDefinition.
-#     def visitPDefinition(self, ctx: PuzzleDSLParser.PDefinitionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#cDefinition.
-#     def visitCDefinition(self, ctx: PuzzleDSLParser.CDefinitionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#epDefinition.
-#     def visitEpDefinition(self, ctx: PuzzleDSLParser.EpDefinitionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#ecDefinition.
-#     def visitEcDefinition(self, ctx: PuzzleDSLParser.EcDefinitionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#customStructDefinition.
-#     def visitCustomStructDefinition(
-#         self,
-#         ctx: PuzzleDSLParser.CustomStructDefinitionContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#domainDefinitions.
-#     def visitDomainDefinitions(self, ctx: PuzzleDSLParser.DomainDefinitionsContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#int.
-#     def visitInt(self, ctx: PuzzleDSLParser.IntContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#primitiveValue.
-#     def visitPrimitiveValue(self, ctx: PuzzleDSLParser.PrimitiveValueContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#set.
-#     def visitSet(self, ctx: PuzzleDSLParser.SetContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#solutionFunction.
-#     def visitSolutionFunction(self, ctx: PuzzleDSLParser.SolutionFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#bFunction.
-#     def visitBFunction(self, ctx: PuzzleDSLParser.BFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#crossFunction.
-#     def visitCrossFunction(self, ctx: PuzzleDSLParser.CrossFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#cycleFunction.
-#     def visitCycleFunction(self, ctx: PuzzleDSLParser.CycleFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#allDifferentFunction.
-#     def visitAllDifferentFunction(
-#         self,
-#         ctx: PuzzleDSLParser.AllDifferentFunctionContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#isRectangleFunction.
-#     def visitIsRectangleFunction(self, ctx: PuzzleDSLParser.IsRectangleFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#isSquareFunction.
-#     def visitIsSquareFunction(self, ctx: PuzzleDSLParser.IsSquareFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#connectFunction.
-#     def visitConnectFunction(self, ctx: PuzzleDSLParser.ConnectFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#noOverlapFunction.
-#     def visitNoOverlapFunction(self, ctx: PuzzleDSLParser.NoOverlapFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#fillFunction.
-#     def visitFillFunction(self, ctx: PuzzleDSLParser.FillFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#quantifier.
-#     def visitQuantifier(self, ctx: PuzzleDSLParser.QuantifierContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#index.
-#     def visitIndex(self, ctx: PuzzleDSLParser.IndexContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#quantifierIndex.
-#     def visitQuantifierIndex(self, ctx: PuzzleDSLParser.QuantifierIndexContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#indexFunction.
-#     def visitIndexFunction(self, ctx: PuzzleDSLParser.IndexFunctionContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#structElement.
-#     def visitStructElement(self, ctx: PuzzleDSLParser.StructElementContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#generationSet.
-#     def visitGenerationSet(self, ctx: PuzzleDSLParser.GenerationSetContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#boolean.
-#     def visitBoolean(self, ctx: PuzzleDSLParser.BooleanContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#singleBoolean.
-#     def visitSingleBoolean(self, ctx: PuzzleDSLParser.SingleBooleanContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#notBoolean.
-#     def visitNotBoolean(self, ctx: PuzzleDSLParser.NotBooleanContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#parenthesizedBoolean.
-#     def visitParenthesizedBoolean(
-#         self,
-#         ctx: PuzzleDSLParser.ParenthesizedBooleanContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#quantifierBoolean.
-#     def visitQuantifierBoolean(self, ctx: PuzzleDSLParser.QuantifierBooleanContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#compoundBoolean.
-#     def visitCompoundBoolean(self, ctx: PuzzleDSLParser.CompoundBooleanContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#constraint.
-#     def visitConstraint(self, ctx: PuzzleDSLParser.ConstraintContext):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#constraintDefinition.
-#     def visitConstraintDefinition(
-#         self,
-#         ctx: PuzzleDSLParser.ConstraintDefinitionContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
-
-#     # Visit a parse tree produced by PuzzleDSLParser#constraintsDefinitions.
-#     def visitConstraintsDefinitions(
-#         self,
-#         ctx: PuzzleDSLParser.ConstraintsDefinitionsContext,
-#     ):
-#         print("Visiting rule:", type(ctx).__name__)
-#         return self.visitChildren(ctx)
+        order = [
+            IntDomainValue,
+            token.Dots,
+            self.EndRangeValue,
+        ]
+        super().__init__(order=order)
+
+
+class DomainValue(AlternativeRule):
+    def __init__(self):
+        choices = [
+            IntDomainValue,
+            RangeValue,
+            token.Null,
+            token.ConstantId,
+        ]
+        super().__init__(choices=choices)
+
+
+class DomainSetBody(OrderRule):
+    class AdditionalDomainValue(MultipleRule):
+        class DomainValueWithComma(OrderRule):
+            def __init__(self):
+                order = [token.Comma, DomainValue]
+                super().__init__(order=order)
+
+        def __init__(self):
+            rule = self.DomainValueWithComma
+            range = Range(min=1, max=2)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            DomainValue,
+            self.AdditionalDomainValue,
+        ]
+        super().__init__(order=order)
+
+
+class DomainSet(OrderRule):
+    def __init__(self):
+        order = [
+            token.LCurly,
+            DomainSetBody,
+            token.RCurly,
+        ]
+        super().__init__(order=order)
+
+
+class HiddenValue(AlternativeRule):
+    def __init__(self):
+        choices = [
+            DomainValue,
+            token.Undecided,
+        ]
+        super().__init__(choices=choices)
+
+
+class HiddenSetBody(OrderRule):
+    class AdditionalHiddenValue(MultipleRule):
+        class HiddenValueWithComma(OrderRule):
+            def __init__(self):
+                order = [token.Comma, HiddenValue]
+                super().__init__(order=order)
+
+        def __init__(self):
+            rule = self.HiddenValueWithComma
+            range = Range(min=1, max=2)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            HiddenValue,
+            self.AdditionalHiddenValue,
+        ]
+        super().__init__(order=order)
+
+
+class HiddenSet(OrderRule):
+    def __init__(self):
+        order = [
+            token.LCurly,
+            HiddenSetBody,
+            token.RCurly,
+        ]
+        super().__init__(order=order)
+
+
+class DomainDefinitionBody(OrderRule):
+    def __init__(self):
+        order = [
+            DomainSet,
+            token.RightArrow,
+            HiddenSet,
+        ]
+        super().__init__(order=order)
+
+
+class PDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.P,
+            token.LeftRightArrow,
+            DomainDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class CDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.C,
+            token.LeftRightArrow,
+            DomainDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class EPDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.EP,
+            token.LeftRightArrow,
+            DomainDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class ECDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.EC,
+            token.LeftRightArrow,
+            DomainDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class CustomStructDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            token.NewStructId,
+            token.LeftRightArrow,
+            DomainDefinitionBody,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class DomainDefinitions(OrderRule):
+    class CustomStructDefinitions(MultipleRule):
+        def __init__(self):
+            rule = CustomStructDefinition
+            range = Range(min=1, max=2)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            PDefinition,
+            CDefinition,
+            EPDefinition,
+            ECDefinition,
+            self.CustomStructDefinitions,
+        ]
+        super().__init__(order=order)
+
+
+# TODO: Implement depth
+class Int(AlternativeRule):
+    DEPTH_LIMIT = 3
+
+    class RecursionInt(OrderRule):
+        class P_M_T(AlternativeRule):
+            def __init__(self):
+                choices = [token.Plus, token.Minus, token.Times]
+                super().__init__(choices)
+
+        def __init__(self):
+            order = [Int, self.P_M_T, Int]
+            super().__init__(order=order)
+
+    class AbsoluteSet(OrderRule):
+        def __init__(self):
+            order = [token.Pipe, Set, token.Pipe]
+            super().__init__(order=order)
+
+    def __init__(self):
+        choices = [
+            token.Number,
+            token.Width,
+            token.Height,
+            SolutionFunction,
+            CrossFunction,
+            CycleFunction,
+            IndexFunction,
+            self.AbsoluteSet,
+            self.RecursionInt,
+        ]
+        super().__init__(choices=choices)
+
+
+class PrimitiveValue(AlternativeRule):
+    def __init__(self):
+        choices = [Int, SolutionFunction, token.Null, token.ConstantId]
+        super().__init__(choices=choices)
+
+
+class Set(AlternativeRule):
+    def __init__(self):
+        choices = [
+            token.Integer,
+            BFunction,
+            StructElement,
+            ConnectFunction,
+            GenerationSet,
+        ]
+        super().__init__(choices=choices)
+
+
+class SolutionFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.Solution,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class BFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.B,
+            token.LParen,
+            StructId,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class CrossFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.Cross,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class CycleFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.Cycle,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class AllDifferentFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.AllDifferent,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class IsRectangleFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.IsRectangle,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class IsSquareFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.IsSquare,
+            token.LParen,
+            StructElement,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class ConnectFunction(OrderRule):
+    def __init__(self):
+        order = [
+            token.Connect,
+            token.LParen,
+            StructElement,
+            token.Comma,
+            RelationshipSet,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class NoOverlapFunction(OrderRule):
+    class MultipleNewStructID(MultipleRule):
+        class NewStructIdWithComma(OrderRule):
+            def __init__(self):
+                order = [token.Comma, token.NewStructId]
+                super().__init__(order=order)
+
+        def __init__(self):
+            rule = self.NewStructIdWithComma
+            range = Range(min=1, max=3)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            token.NoOverlap,
+            token.LParen,
+            token.NewStructId,
+            self.MultipleNewStructID,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class FillFunction(OrderRule):
+    class MultipleNewStructID(MultipleRule):
+        class NewStructIdWithComma(OrderRule):
+            def __init__(self):
+                order = [token.Comma, token.NewStructId]
+                super().__init__(order=order)
+
+        def __init__(self):
+            rule = self.NewStructIdWithComma
+            range = Range(min=1, max=3)
+            super().__init__(rule=rule, range=range)
+
+    def __init__(self):
+        order = [
+            token.Fill,
+            token.LParen,
+            token.NewStructId,
+            self.MultipleNewStructID,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class Quantifier(OrderRule):
+    class A_E(AlternativeRule):
+        def __init__(self):
+            choices = [token.All, token.Exists]
+            super().__init__(choices=choices)
+
+    def __init__(self):
+        order = [
+            self.A_E,
+            token.LParen,
+            token.BoundVariable,
+            token.RParen,
+            token.In,
+            Set,
+        ]
+        super().__init__(order=order)
+
+
+class Index(OrderRule):
+    class S_I(AlternativeRule):
+        def __init__(self):
+            choices = [token.Subset, token.In]
+            super().__init__(choices=choices)
+
+    def __init__(self):
+        order = [
+            token.BoundVariable,
+            self.S_I,
+            Set,
+        ]
+        super().__init__(order=order)
+
+
+## FIXME: Implement Depth
+class QuantifierIndex(OrderRule):
+    class I_Q(AlternativeRule):
+        def __init__(self):
+            choices = [Index, QuantifierIndex]
+            super().__init__(choices=choices)
+
+    def __init__(self):
+        order = [
+            Quantifier,
+            token.Comma,
+            token.LParen,
+            self.I_Q,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class IndexFunction(OrderRule):
+    class S_P(AlternativeRule):
+        def __init__(self):
+            choices = [token.Sum, token.Product]
+            super().__init__(choices=choices)
+
+    class I_Q(AlternativeRule):
+        def __init__(self):
+            choices = [Index, QuantifierIndex]
+            super().__init__(choices=choices)
+
+    def __init__(self):
+        order = [
+            self.S_P,
+            token.LCurly,
+            self.I_Q,
+            token.RCurly,
+            token.LParen,
+            Int,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class StructElement(RawToken):
+    def __init__(self):
+        token = Token(type=TokenType.BOUND_VARIABLE)
+        super().__init__(token=token)
+
+
+class GenerationSet(OrderRule):
+    def __init__(self):
+        order = [
+            token.LCurly,
+            token.BoundVariable,
+            token.Pipe,
+            Constraint,
+            token.RCurly,
+        ]
+        super().__init__(order=order)
+
+
+class Boolean(AlternativeRule):
+    class SetComparison(OrderRule):
+        class S_I(AlternativeRule):
+            def __init__(self):
+                choices = [
+                    token.Subset,
+                    token.In,
+                ]
+                super().__init__(choices=choices)
+
+        def __init__(self):
+            order = [
+                Set,
+                self.S_I,
+                Set,
+            ]
+            super().__init__(order=order)
+
+    class PrimitiveValueInSet(OrderRule):
+        def __init__(self):
+            order = [
+                PrimitiveValue,
+                token.In,
+                Set,
+            ]
+            super().__init__(order=order)
+
+    class SetEquality(OrderRule):
+        class N_E(AlternativeRule):
+            def __init__(self):
+                choices = [
+                    token.NotEqual,
+                    token.Equal,
+                ]
+                super().__init__(choices=choices)
+
+        class S_E(AlternativeRule):
+            def __init__(self):
+                choices = [
+                    Set,
+                    token.EmptySet,
+                ]
+                super().__init__(choices=choices)
+
+        def __init__(self):
+            order = [
+                Set,
+                self.N_E,
+                self.S_E,
+            ]
+            super().__init__(order=order)
+
+    class PrimitiveValueComparison(OrderRule):
+        class N_E(AlternativeRule):
+            def __init__(self):
+                choices = [
+                    token.NotEqual,
+                    token.Equal,
+                ]
+                super().__init__(choices=choices)
+
+        def __init__(self):
+            order = [
+                PrimitiveValue,
+                self.N_E,
+                PrimitiveValue,
+            ]
+            super().__init__(order=order)
+
+    def __init__(self):
+        choices = [
+            FillFunction,
+            NoOverlapFunction,
+            AllDifferentFunction,
+            self.SetComparison,
+            self.PrimitiveValueInSet,
+            IsSquareFunction,
+            IsRectangleFunction,
+            self.SetEquality,
+            self.PrimitiveValueComparison,
+        ]
+        super().__init__(choices=choices)
+
+
+class SingleBoolean(AlternativeRule):
+    def __init__(self):
+        choices = [
+            Boolean,
+            NotBoolean,
+            ParenthesizedBoolean,
+            QuantifierBoolean,
+        ]
+        super().__init__(choices=choices)
+
+
+class NotBoolean(OrderRule):
+    def __init__(self):
+        order = [
+            token.Not,
+            token.LParen,
+            CompoundBoolean,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class ParenthesizedBoolean(OrderRule):
+    def __init__(self):
+        order = [
+            token.LBracket,
+            CompoundBoolean,
+            token.RBracket,
+        ]
+        super().__init__(order=order)
+
+
+class QuantifierBoolean(OrderRule):
+    def __init__(self):
+        order = [
+            Quantifier,
+            token.Comma,
+            token.LParen,
+            CompoundBoolean,
+            token.RParen,
+        ]
+        super().__init__(order=order)
+
+
+class CompoundBoolean(OrderRule):
+    class MultipleAdditionalBoolean(MultipleRule):
+        def __init__(self):
+            rule = self.AdditionalBoolean
+            range = Range(min=0, max=0)
+            super().__init__(rule=rule, range=range)
+
+        class AdditionalBoolean(OrderRule):
+            class A_O_T_E(AlternativeRule):
+                def __init__(self):
+                    choices = [
+                        token.And,
+                        token.Or,
+                        token.Then,
+                        token.Equivalent,
+                    ]
+                    super().__init__(choices)
+
+            def __init__(self):
+                order = [self.A_O_T_E, SingleBoolean]
+                super().__init__(order=order)
+
+    def __init__(self):
+        order = [SingleBoolean, self.MultipleAdditionalBoolean]
+        super().__init__(order=order)
+
+
+class Constraint(OrderRule):
+    def __init__(self):
+        order = [
+            CompoundBoolean,
+        ]
+        super().__init__(order=order)
+
+
+class ConstraintDefinition(OrderRule):
+    def __init__(self):
+        order = [
+            token.Indent,
+            Constraint,
+            token.Semi,
+            token.Newline,
+        ]
+        super().__init__(order=order)
+
+
+class ConstraintsDefinitions(MultipleRule):
+    def __init__(self):
+        rule = ConstraintDefinition
+        range = Range(min=1, max=3)
+        super().__init__(rule=rule, range=range)
