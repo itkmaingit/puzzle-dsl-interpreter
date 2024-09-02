@@ -9,7 +9,9 @@ from antlr4 import (
     Recognizer,
 )
 from antlr4.error.ErrorListener import ErrorListener
-from generator.PuzzleDSLRandomGenerator import CustomVisitor
+from interpreter.CustomPuzzleDSLParserVisitor import (
+    CustomPuzzleDSLParserVisitor as Visitor,
+)
 from parser.PuzzleDSLLexer import PuzzleDSLLexer
 from parser.PuzzleDSLParser import PuzzleDSLParser
 from pydantic import BaseModel
@@ -84,20 +86,32 @@ def main(argv):
     if error_listener.errors:
         print(error_listener.parse_first_error_message())
     # walker = ParseTreeWalker()
-    # visitor = Visitor(parser)
-    c_visitor = CustomVisitor()
+    visitor = Visitor(parser)
     # listener = Listener(parser)
 
     # result = walker.walk(listener, tree)
     # result = visitor.visit(tree)
-    result = c_visitor.visit(tree)
+    result = visitor.visit(tree)
 
 
 if __name__ == "__main__":
     input_str = """
 structs:
-	A = combine ( C , { H, V } );
-    B = combine
+	A1 = combine ( C , { H, V } );
+	A2 = combine ( C , { H, V } );
+
+domain-hidden:
+	P <-> { null } -> { null };
+	C <-> { null } -> { null };
+	Ep <-> { null } -> { null };
+	Ec <-> { null } -> { null };
+	A1 <-> { 1 ... n * m } -> { 1 ... n * m };
+	A2 <-> { 1 ... n * m } -> { 1 ... n * m };
+
+constraints:
+	fill(A1, A2);
+	All(a1) <- B(A1), ( !(is_rectangle(a1)) && solution(a1) == |a1| );
+	All(a2) <- B(A2), ( is_rectangle(a2) && solution(a2) == |a2| );
 """
 
     main([None, input_str])
