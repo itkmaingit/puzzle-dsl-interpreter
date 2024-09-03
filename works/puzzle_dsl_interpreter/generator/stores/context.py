@@ -11,6 +11,7 @@ class Context(IntEnum):
     CUSTOM_STRUCT_DEFINITION = auto()
     DOMAIN_SET_BODY = auto()
     DOMAIN_DEFINITIONS = auto()
+    B_FUNCTION = auto()
 
 
 class ContextStore:

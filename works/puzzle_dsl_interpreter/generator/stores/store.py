@@ -32,6 +32,10 @@ class StateStore:
         return self.__relationship_store.var
 
     @property
+    def constants(self) -> list[str]:
+        return self.__constants_store.var
+
+    @property
     def count_defined_structs(self) -> int:
         return len(self.defined_structs) - 4
 

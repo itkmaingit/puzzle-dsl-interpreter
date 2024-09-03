@@ -59,6 +59,8 @@ class NewStructId(RawToken):
         elif store.context in [Context.CUSTOM_STRUCT_DEFINITION]:
             token = Token(type=type, ok=store.defined_structs)
             store.remove_struct(token.text)
+        elif store.context in [Context.B_FUNCTION]:
+            token = Token(type=type, ok=store.defined_structs[4:])
         token = Token(type=type)
         super().__init__(token=token)
 
@@ -91,6 +93,8 @@ class ConstantId(RawToken):
         if store.context in [Context.DOMAIN_SET_BODY]:
             token = Token(type=type)
             store.register_constants(token.text)
+        else:
+            token = Token(type=type, ok=store.constants)
 
         super().__init__(token=token)
 

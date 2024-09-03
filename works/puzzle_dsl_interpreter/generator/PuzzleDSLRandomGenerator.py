@@ -495,6 +495,7 @@ class SolutionFunction(OrderRule):
 
 class BFunction(OrderRule):
     def __init__(self):
+        store.enter(Context.B_FUNCTION)
         order = [
             token.B(),
             token.LParen(),
@@ -502,6 +503,7 @@ class BFunction(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
+        store.exit()
 
 
 class CrossFunction(OrderRule):
