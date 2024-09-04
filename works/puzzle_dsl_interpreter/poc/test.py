@@ -90,6 +90,7 @@ def main(argv):
     # listener = Listener(parser)
 
     # result = walker.walk(listener, tree)
+    # result = visitor.visit(tree)
     result = visitor.visit(tree)
 
 
@@ -97,26 +98,18 @@ if __name__ == "__main__":
     input_str = """
 structs:
 	A = combine ( C , { H, V } );
-	Ah = combine ( C , { H } );
-	Av = combine ( C , { V } );
 
 domain-hidden:
 	P <-> { null } -> { null };
-	C <-> { 1 ... n, x } -> { 1 ... n};
+	C <-> { null, 1 ... 4} -> { undecided };
 	Ep <-> { null } -> { null };
 	Ec <-> { null } -> { null };
 	A <-> { null } -> { null };
-	Ah <-> { null } -> { null };
-	Av <-> { null } -> { null };
 
 constraints:
-	n == m;
-	fill(Ah);
-	fill(Av);
-	All(ah) <- B(Ah), |ah| == 9 && all_different(ah);
-	All(av) <- B(Av), |av| == 9 && all_different(av);
 	|B(A)| == 1;
-	All(c) <- B(C), solution(c) == x <=> {c | Exists(a) <- B(A), c <- a} == None && {co <- connect(c, {H, V}) | solution(co) == x} == None;
+	All(c) <- B(C), (solution(c) <- N <=> [Exists(a) <- B(A), (c <- a) && solution(c) == |{ co | co <- connect(c, {H, V}) && solution(co) <- N }| && All(co) <- connect(c, {H, V}), (solution(co) != solution(c))]);
+
 """
 
     main([None, input_str])
