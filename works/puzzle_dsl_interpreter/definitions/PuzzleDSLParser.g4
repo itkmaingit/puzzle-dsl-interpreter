@@ -113,8 +113,7 @@ int:
 primitiveValue: int | solutionFunction | NULL | CONSTANT_ID;
 
 set:
-	INTEGER
-	| bFunction
+	bFunction
 	| structElement
 	| connectFunction
 	| generationSet;
@@ -155,7 +154,7 @@ boolean:
 	| noOverlapFunction
 	| allDifferentFunction
 	| set (SUBSET | IN) set
-	| primitiveValue IN set
+	| int IN INTEGER
 	| isSquareFunction
 	| isRectangleFunction
 	| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
