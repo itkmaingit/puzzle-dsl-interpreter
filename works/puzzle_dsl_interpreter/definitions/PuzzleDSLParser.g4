@@ -113,8 +113,7 @@ int:
 primitiveValue: int | solutionFunction | NULL | CONSTANT_ID;
 
 set:
-	INTEGER
-	| bFunction
+	bFunction
 	| structElement
 	| connectFunction
 	| generationSet;
@@ -155,7 +154,7 @@ boolean:
 	| noOverlapFunction
 	| allDifferentFunction
 	| set (SUBSET | IN) set
-	| primitiveValue IN set
+	| int IN INTEGER
 	| isSquareFunction
 	| isRectangleFunction
 	| set (NOTEQUAL | EQUAL) (set | EMPTYSET)
@@ -168,13 +167,12 @@ singleBoolean: (
 		| quantifierBoolean
 	);
 
-notBoolean: NOT LPAREN ( singleBoolean | compoundBoolean) RPAREN;
+notBoolean: NOT LPAREN compoundBoolean RPAREN;
 
-parenthesizedBoolean:
-	LBRACKET (singleBoolean | compoundBoolean) RBRACKET;
+parenthesizedBoolean: LBRACKET compoundBoolean RBRACKET;
 
 quantifierBoolean:
-	quantifier COMMA LPAREN (singleBoolean | compoundBoolean) RPAREN;
+	quantifier COMMA LPAREN compoundBoolean RPAREN;
 
 compoundBoolean:
 	singleBoolean (
@@ -182,6 +180,6 @@ compoundBoolean:
 	)*;
 
 // constraint definitions
-constraint: ( singleBoolean | compoundBoolean);
+constraint: compoundBoolean;
 constraintDefinition: (INDENT constraint SEMI);
 constraintsDefinitions: constraintDefinition+;
