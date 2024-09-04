@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from random import randint
+
+from generator.definitions.errors import UnableToContinueError
 from generator.definitions.rules import RawToken
 from generator.definitions.token import Token, TokenType
 from generator.stores.context import Context
@@ -51,17 +54,31 @@ class EC(RawToken):
 class NewStructId(RawToken):
     def __init__(self):
         type = TokenType.NEW_STRUCT_ID
+        # ctx_struct_definition = [Context.STRUCT_DEFINITION]
         if store.context in [Context.STRUCT_DEFINITION]:
             token = Token(type=type, ng=store.defined_structs)
             store.register_struct(token.text)
+        # 特別対応
         elif store.context in [Context.STRUCT_DEFINITION_BODY]:
-            token = Token(type=type, ng=store.defined_structs[:-1])
-        elif store.context in [Context.CUSTOM_STRUCT_DEFINITION]:
-            token = Token(type=type, ok=store.defined_structs)
+            if store.count_new_structs < 2:
+                token = [
+                    Token(type=TokenType.P),
+                    Token(type=TokenType.C),
+                    Token(type=TokenType.EP),
+                    Token(type=TokenType.EC),
+                ][randint(0, 3)]
+            else:
+                token = Token(type=type, ok=store.new_structs[:-1])
+        elif store.context in [
+            Context.DOMAIN_DEFINITIONS,
+            Context.BOARD_FUNCTION,
+        ]:
+            token = Token(type=type, ok=store.new_structs)
             store.remove_struct(token.text)
         elif store.context in [Context.B_FUNCTION]:
-            token = Token(type=type, ok=store.defined_structs[4:])
-        token = Token(type=type)
+            token = Token(type=type, ok=store.new_structs)
+        else:
+            token = Token(type=type)
         super().__init__(token=token)
 
 
@@ -69,9 +86,10 @@ class RelationshipId(RawToken):
     def __init__(self):
         type = TokenType.RELATIONSHIP_ID
         if store.context in [Context.RELATIONSHIP_SET_BODY]:
-            token = Token(type=Token, ng=store.relationship)
+            token = Token(type=type, ng=store.relationship)
             store.register_relationship(token.text)
-        token = Token(type=type)
+        else:
+            token = Token(type=type)
         super().__init__(token=token)
 
 
@@ -91,10 +109,13 @@ class ConstantId(RawToken):
     def __init__(self):
         type = TokenType.CONSTANT_ID
         if store.context in [Context.DOMAIN_SET_BODY]:
-            token = Token(type=type)
+            token = Token(type=type, ng=store.constants)
             store.register_constants(token.text)
         else:
-            token = Token(type=type, ok=store.constants)
+            try:
+                token = Token(type=type, ok=store.constants)
+            except UnableToContinueError:
+                pass
 
         super().__init__(token=token)
 
@@ -191,7 +212,19 @@ class Product(RawToken):
 
 class BoundVariable(RawToken):
     def __init__(self):
-        token = Token(type=TokenType.BOUND_VARIABLE)
+        type = TokenType.BOUND_VARIABLE
+        if store.context in [Context.STRUCT_ELEMENT]:
+            token = Token(type=type, ok=store.bound_variables)
+        elif store.context in [
+            Context.QUANTIFIER_BOOLEAN,
+            Context.GENERATION_SET,
+            Context.QUANTIFIER_INDEX,
+            Context.INDEX_FUNCTION,
+        ]:
+            token = Token(type=type, ng=store.bound_variables)
+            store.register_bound_variables(token.text)
+        else:
+            token = Token(type=type)
         super().__init__(token=token)
 
 

@@ -5,6 +5,7 @@ import re
 from enum import IntEnum, auto
 
 import exrex
+from generator.utils.logger import logger
 from pydantic import BaseModel
 
 
@@ -19,14 +20,21 @@ class Token(BaseModel):
         ng: list[str] | None = None,
     ) -> Token:
         pattern = self.__get_pattern(type)
+        if ok is not None and len(ok) == 0:
+            logger.error(
+                "[red] #########未定義の変数が使われる可能性があります#############",
+            )
         if ok:
             text = random.choice(ok)
-        else:
+        elif ng:
             in_ng = True
             while in_ng:
                 text = exrex.getone(pattern)
                 in_ng = text in ng
+        else:
+            text = exrex.getone(pattern)
         if not re.match(pattern, text):
+            logger.debug(f"text: {text}, pattern: {pattern}, ok: {ok}")
             raise ValueError("Tokenの文字列が不正です。")
         super().__init__(type=type, text=text)
 
@@ -37,16 +45,6 @@ class Token(BaseModel):
 
     def __hash__(self) -> int:
         return hash((self.type, self.text))
-
-    # def re_lottery(self):
-    #     pattern = self.__get_pattern(self.type)
-    #     self.text = exrex.getone(pattern)
-
-    # def re_construct(self, text: str):
-    #     pattern = self.__get_pattern(self.type)
-    #     if not re.match(pattern, text):
-    #         raise ValueError("Tokenの文字列が不正です。")
-    #     self.text = text
 
     def __get_pattern(self, type: TokenType):
         pattern = TOKEN_PATTERNS.get(type)

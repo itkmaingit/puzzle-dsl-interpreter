@@ -26,6 +26,8 @@ class Range(BaseModel):
     max: int = 1
 
     def generate(self) -> range:
+        if self.max < self.min:
+            return range(0)
         # 範囲の差を取得
         range_diff = self.max - self.min + 1
 
@@ -98,6 +100,17 @@ class OrderRule(BaseRule):
         for rule in self.__order:
             result += rule.generate()
         return result
+
+
+class SingleRule(BaseRule):
+    def __init__(
+        self,
+        rule: BaseRule,
+    ):
+        self.__rule = rule
+
+    def generate(self) -> list[Token]:
+        return self.__rule.generate()
 
 
 class RuleType(IntEnum):

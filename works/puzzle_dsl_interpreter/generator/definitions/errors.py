@@ -15,3 +15,23 @@ class NotGivenOrderError(Exception):
 
 class NotGivenTokenError(Exception):
     pass
+
+
+class NotDeletableError(Exception):
+    pass
+
+
+class DuplicationVariableError(Exception):
+    pass
+
+
+class ForbiddenOperationError(Exception):
+    pass
+
+
+class NotMatchContextError(Exception):
+    pass
+
+
+class UnableToContinueError(Exception):
+    pass

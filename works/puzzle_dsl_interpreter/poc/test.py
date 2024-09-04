@@ -97,21 +97,19 @@ def main(argv):
 if __name__ == "__main__":
     input_str = """
 structs:
-	A1 = combine ( C , { H, V } );
-	A2 = combine ( C , { H, V } );
+	A = combine ( C , { H, V } );
 
 domain-hidden:
 	P <-> { null } -> { null };
-	C <-> { null } -> { null };
+	C <-> { null, 1 ... 4} -> { undecided };
 	Ep <-> { null } -> { null };
 	Ec <-> { null } -> { null };
-	A1 <-> { 1 ... n * m } -> { 1 ... n * m };
-	A2 <-> { 1 ... n * m } -> { 1 ... n * m };
+	A <-> { null } -> { null };
 
 constraints:
-	fill(A1, A2);
-	All(a1) <- B(A1), ( !(is_rectangle(a1)) && solution(a1) == |a1| );
-	All(a2) <- B(A2), ( is_rectangle(a2) && solution(a2) == |a2| );
+	|B(A)| == 1;
+	All(c) <- B(C), (solution(c) <- N <=> [Exists(a) <- B(A), (c <- a) && solution(c) == |{ co | co <- connect(c, {H, V}) && solution(co) <- N }| && All(co) <- connect(c, {H, V}), (solution(co) != solution(c))]);
+
 """
 
     main([None, input_str])
