@@ -12,6 +12,7 @@ from generator.helpers import token
 from generator.helpers.operators import lottery, repeat
 from generator.stores.context import Context
 from generator.stores.store import store
+from generator.utils.logger import logger
 
 
 class File(OrderRule):
@@ -63,8 +64,12 @@ class StructId(AlternativeRule):
             token.C,
             token.EP,
             token.EC,
-            token.NewStructId,
         ]
+        if (
+            store.count_new_structs >= 2
+            or store.context != Context.STRUCT_DEFINITION_BODY
+        ):
+            choices.append(token.NewStructId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -177,7 +182,9 @@ class IntDomainValue(AlternativeRule):
         def __init__(self):
             order = [
                 IntDomainValue.W_H(),
+                token.Space(),
                 IntDomainValue.P_M_T(),
+                token.Space(),
                 IntDomainValue.W_H(),
             ]
             super().__init__(order=order)
@@ -186,7 +193,9 @@ class IntDomainValue(AlternativeRule):
         def __init__(self):
             order = [
                 IntDomainValue.W_H(),
+                token.Space(),
                 IntDomainValue.P_M_T(),
+                token.Space(),
                 IntDomainValue(),
             ]
             super().__init__(order=order)
@@ -195,7 +204,9 @@ class IntDomainValue(AlternativeRule):
         def __init__(self):
             order = [
                 IntDomainValue(),
+                token.Space(),
                 IntDomainValue.P_M_T(),
+                token.Space(),
                 IntDomainValue.W_H(),
             ]
             super().__init__(order=order)
@@ -468,7 +479,6 @@ class DomainDefinitions(OrderRule):
         store.exit_domain_difinitions()
 
 
-# TODO: Implement depth
 class Int(AlternativeRule):
     class RecursionInt(OrderRule):
         class P_M_T(AlternativeRule):
@@ -484,7 +494,9 @@ class Int(AlternativeRule):
         def __init__(self):
             order = [
                 Int(),
+                token.Space(),
                 self.P_M_T(),
+                token.Space(),
                 Int(),
             ]
             super().__init__(order=order)
@@ -492,9 +504,9 @@ class Int(AlternativeRule):
     class AbsoluteSet(OrderRule):
         def __init__(self):
             order = [
-                token.Pipe(),
+                token.LeftAbsolute(),
                 Set(),
-                token.Pipe(),
+                token.RightAbsolute(),
             ]
             super().__init__(order=order)
 
@@ -503,13 +515,11 @@ class Int(AlternativeRule):
             token.Number,
             token.Width,
             token.Height,
-            SolutionFunction,
-            CrossFunction,
-            CycleFunction,
-            IndexFunction,
             self.AbsoluteSet,
             self.RecursionInt,
         ]
+        if store.exists_bound_variables():
+            choices += [SolutionFunction, CrossFunction, CycleFunction, IndexFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -518,10 +528,11 @@ class PrimitiveValue(AlternativeRule):
     def __init__(self):
         choices = [
             Int,
-            SolutionFunction,
             token.Null,
             token.ConstantId,
         ]
+        if store.exists_bound_variables():
+            choices.append(SolutionFunction)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -817,9 +828,17 @@ class GenerationSet(OrderRule):
             token.Space(),
             token.BoundVariable(),
             token.Space(),
+            token.In(),
+            token.Space(),
+        ]
+        concealed_value = store.conceal_bound_variable()
+        order.append(Set())
+        store.register_bound_variables(concealed_value)
+        order += [
+            token.Space(),
             token.Pipe(),
             token.Space(),
-            Constraint(),
+            CompoundBoolean(),
             token.Space(),
             token.RCurly(),
         ]
@@ -828,7 +847,7 @@ class GenerationSet(OrderRule):
 
 
 class Boolean(AlternativeRule):
-    WEIGHT = 3
+    WEIGHT = 5
 
     class SetComparison(OrderRule):
         class S_I(AlternativeRule):
@@ -850,14 +869,16 @@ class Boolean(AlternativeRule):
             ]
             super().__init__(order=order)
 
-    class IntInInterger(OrderRule):
-        def __init__(self):
-            order = [
-                Int(),
-                token.In(),
-                token.Integer(),
-            ]
-            super().__init__(order=order)
+    # class IntInInterger(OrderRule):
+    #     def __init__(self):
+    #         order = [
+    #             Int(),
+    #             token.Space(),
+    #             token.In(),
+    #             token.Space(),
+    #             token.Integer(),
+    #         ]
+    #         super().__init__(order=order)
 
     class SetEquality(OrderRule):
         class N_E(AlternativeRule):
@@ -889,11 +910,13 @@ class Boolean(AlternativeRule):
             super().__init__(order=order)
 
     class PrimitiveValueComparison(OrderRule):
-        class N_E(AlternativeRule):
+        class N_E_M_T(AlternativeRule):
             def __init__(self):
                 choices = [
                     token.NotEqual,
                     token.Equal,
+                    token.MoreThan,
+                    token.LessThan,
                 ]
                 choice = lottery(choices, self.__class__.__name__)()
                 super().__init__(choice=choice)
@@ -901,37 +924,44 @@ class Boolean(AlternativeRule):
         def __init__(self):
             order = [
                 PrimitiveValue(),
-                self.N_E(),
+                token.Space(),
+                self.N_E_M_T(),
+                token.Space(),
                 PrimitiveValue(),
             ]
             super().__init__(order=order)
 
     def __init__(self):
         choices = [
-            FillFunction,
-            NoOverlapFunction,
-            AllDifferentFunction,
+            # FillFunction,
+            # NoOverlapFunction,
             self.SetComparison,
-            self.IntInInterger,
-            IsSquareFunction,
-            IsRectangleFunction,
+            # self.IntInInterger,
             self.SetEquality,
             self.PrimitiveValueComparison,
         ]
+        if store.exists_bound_variables():
+            choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
 
 class SingleBoolean(AlternativeRule):
+    PREVENT_NOT_BOOLEAN = False
+
     def __init__(self):
         choices = [
             Boolean,
-            NotBoolean,
-            ParenthesizedBoolean,
+            # ParenthesizedBoolean,
             QuantifierBoolean,
         ]
-        choice = lottery(choices, self.__class__.__name__)()
-        super().__init__(choice=choice)
+        if not self.PREVENT_NOT_BOOLEAN:
+            choices.append(NotBoolean)
+        choice = lottery(choices, self.__class__.__name__)
+        logger.debug(choice.__name__)
+        if choice.__name__ == "NotBoolean":
+            self.PREVENT_NOT_BOOLEAN = True
+        super().__init__(choice=choice())
 
 
 class NotBoolean(OrderRule):
@@ -971,6 +1001,8 @@ class QuantifierBoolean(OrderRule):
 
 
 class CompoundBoolean(OrderRule):
+    WEIGHT = 10
+
     class MultipleAdditionalBoolean(MultipleRule):
         def __init__(self):
             rule = self.AdditionalBoolean
@@ -1007,12 +1039,16 @@ class CompoundBoolean(OrderRule):
         super().__init__(order=order)
 
 
-class Constraint(OrderRule):
+# TODO: Apply FillFunction and NoOverlapFunction
+class Constraint(AlternativeRule):
     def __init__(self):
-        order = [
-            CompoundBoolean(),
+        choices = [
+            CompoundBoolean,
+            # FillFunction,
+            # NoOverlapFunction,
         ]
-        super().__init__(order=order)
+        choice = lottery(choices, self.__class__.__name__)()
+        super().__init__(choice=choice)
 
 
 class ConstraintDefinition(OrderRule):
@@ -1024,11 +1060,12 @@ class ConstraintDefinition(OrderRule):
             token.Newline(),
         ]
         super().__init__(order=order)
+        store.exit_constraint_definition()
 
 
 class ConstraintsDefinitions(MultipleRule):
     def __init__(self):
         rule = ConstraintDefinition
-        range = Range(min=1, max=3)
+        range = Range(min=3, max=5)
         order = repeat(rule, range)
         super().__init__(order=order)

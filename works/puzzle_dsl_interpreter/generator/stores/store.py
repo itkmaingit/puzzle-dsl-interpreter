@@ -56,6 +56,9 @@ class StateStore:
     def bound_variables(self) -> list[str]:
         return self.__bound_variables_store.var
 
+    def exists_bound_variables(self) -> bool:
+        return len(self.__bound_variables_store.var) >= 1
+
     def register_struct(self, struct_id: str):
         self.__defined_struct_store.add(struct_id)
         self.__new_struct_store.add(struct_id)
@@ -110,6 +113,9 @@ class StateStore:
     def exit_with_cleanup(self, cls_name: str):
         self.__bound_variables_store.pop()
         self.exit(cls_name)
+
+    def exit_constraint_definition(self):
+        self.__bound_variables_store.reset()
 
     def conceal_bound_variable(self) -> str:
         return self.__bound_variables_store.pop()

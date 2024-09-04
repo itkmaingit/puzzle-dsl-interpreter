@@ -7,6 +7,8 @@ from rich.logging import RichHandler
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(message)s",
-    handlers=[RichHandler(markup=True, rich_tracebacks=True)],
+    handlers=[
+        RichHandler(markup=True, rich_tracebacks=True),
+    ],
 )
 logger = logging.getLogger(__name__)

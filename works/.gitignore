@@ -7,3 +7,5 @@ grammars-v4
 parser
 tests/input
 test
+*.log
+sample.pzl

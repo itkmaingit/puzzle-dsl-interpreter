@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from random import randint
-
 from generator.definitions.errors import UnableToContinueError
 from generator.definitions.rules import RawToken
 from generator.definitions.token import Token, TokenType
@@ -60,15 +58,7 @@ class NewStructId(RawToken):
             store.register_struct(token.text)
         # 特別対応
         elif store.context in [Context.STRUCT_DEFINITION_BODY]:
-            if store.count_new_structs < 2:
-                token = [
-                    Token(type=TokenType.P),
-                    Token(type=TokenType.C),
-                    Token(type=TokenType.EP),
-                    Token(type=TokenType.EC),
-                ][randint(0, 3)]
-            else:
-                token = Token(type=type, ok=store.new_structs[:-1])
+            token = Token(type=type, ok=store.new_structs[:-1])
         elif store.context in [
             Context.DOMAIN_DEFINITIONS,
             Context.BOARD_FUNCTION,
@@ -225,7 +215,12 @@ class BoundVariable(RawToken):
             store.register_bound_variables(token.text)
         else:
             token = Token(type=type)
+        self.__text = token.text
         super().__init__(token=token)
+
+    @property
+    def text(self) -> str:
+        return self.__text
 
 
 class Inf(RawToken):
@@ -312,6 +307,18 @@ class NotEqual(RawToken):
         super().__init__(token=token)
 
 
+class MoreThan(RawToken):
+    def __init__(self):
+        token = Token(type=TokenType.MORE_THAN)
+        super().__init__(token=token)
+
+
+class LessThan(RawToken):
+    def __init__(self):
+        token = Token(type=TokenType.LESS_THAN)
+        super().__init__(token=token)
+
+
 class All(RawToken):
     def __init__(self):
         token = Token(type=TokenType.ALL)
@@ -393,6 +400,18 @@ class Assign(RawToken):
 class Pipe(RawToken):
     def __init__(self):
         token = Token(type=TokenType.PIPE)
+        super().__init__(token=token)
+
+
+class LeftAbsolute(RawToken):
+    def __init__(self):
+        token = Token(type=TokenType.LEFT_ABSOLUTE)
+        super().__init__(token=token)
+
+
+class RightAbsolute(RawToken):
+    def __init__(self):
+        token = Token(type=TokenType.RIGHT_ABSOLUTE)
         super().__init__(token=token)
 
 

@@ -96,6 +96,8 @@ class TokenType(IntEnum):
     IN = auto()
     EQUAL = auto()
     NOTEQUAL = auto()
+    MORE_THAN = auto()
+    LESS_THAN = auto()
     ALL = auto()
     EXISTS = auto()
     THEN = auto()
@@ -110,6 +112,8 @@ class TokenType(IntEnum):
     SEMI = auto()
     ASSIGN = auto()
     PIPE = auto()
+    LEFT_ABSOLUTE = auto()
+    RIGHT_ABSOLUTE = auto()
     PLUS = auto()
     MINUS = auto()
     TIMES = auto()
@@ -158,6 +162,8 @@ TOKEN_PATTERNS = {
     TokenType.INTEGER: r"^N$",
     TokenType.EQUAL: r"^==$",
     TokenType.NOTEQUAL: r"^!=$",
+    TokenType.MORE_THAN: r"^>$",
+    TokenType.LESS_THAN: r"^<$",
     TokenType.AND: r"^&&$",
     TokenType.OR: r"^\|\|$",
     TokenType.NOT: r"^!$",
@@ -177,6 +183,8 @@ TOKEN_PATTERNS = {
     TokenType.SEMI: r"^;$",
     TokenType.ASSIGN: r"^=$",
     TokenType.PIPE: r"^\|$",
+    TokenType.LEFT_ABSOLUTE: r"^\|\[$",
+    TokenType.RIGHT_ABSOLUTE: r"^\]\|$",
     TokenType.PLUS: r"^\+$",
     TokenType.MINUS: r"^-$",
     TokenType.TIMES: r"^\*$",
