@@ -5,6 +5,7 @@ import re
 from enum import IntEnum, auto
 
 import exrex
+from generator.definitions.errors import UnableToContinueError
 from generator.utils.logger import logger
 from pydantic import BaseModel
 
@@ -19,11 +20,13 @@ class Token(BaseModel):
         ok: list[str] | None = None,
         ng: list[str] | None = None,
     ) -> Token:
+        error_flag = False
         pattern = self.__get_pattern(type)
         if ok is not None and len(ok) == 0:
             logger.error(
                 "[red] #########未定義の変数が使われる可能性があります#############",
             )
+            error_flag = True
         if ok:
             text = random.choice(ok)
         elif ng:
@@ -37,6 +40,9 @@ class Token(BaseModel):
             logger.debug(f"text: {text}, pattern: {pattern}, ok: {ok}")
             raise ValueError("Tokenの文字列が不正です。")
         super().__init__(type=type, text=text)
+        if error_flag:
+            logger.error(f"[red] Undefined Variable: {text}")
+            raise UnableToContinueError
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Token):

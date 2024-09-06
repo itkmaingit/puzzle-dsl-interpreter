@@ -19,6 +19,7 @@ class StateStore:
         self.__new_struct_store = VariableStore(is_deletable=True)
         self.__relationship_store = VariableStore(is_deletable=True)
         self.__bound_variables_store = VariableStore(is_deletable=True)
+        self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
 
         self.__ctx_store = ContextStore()
 
@@ -53,11 +54,21 @@ class StateStore:
         return len(self.new_structs)
 
     @property
-    def bound_variables(self) -> list[str]:
-        return self.__bound_variables_store.var
+    def ok_bound_variables(self) -> list[str]:
+        return list(
+            set(self.__bound_variables_store.var)
+            - set(self.__tmp_banned_bound_variables_store.var),
+        )
+
+    @property
+    def ng_bound_variables(self) -> list[str]:
+        return (
+            self.__bound_variables_store.var
+            + self.__tmp_banned_bound_variables_store.var
+        )
 
     def exists_bound_variables(self) -> bool:
-        return len(self.__bound_variables_store.var) >= 1
+        return len(self.ok_bound_variables) >= 1
 
     def register_struct(self, struct_id: str):
         self.__defined_struct_store.add(struct_id)
@@ -118,10 +129,13 @@ class StateStore:
         self.__bound_variables_store.reset()
 
     def conceal_bound_variable(self) -> str:
-        return self.__bound_variables_store.pop()
+        concealed_value = self.__bound_variables_store.pop()
+        self.__tmp_banned_bound_variables_store.add(concealed_value)
+        return concealed_value
 
     def restore_bound_variable(self, concealed_value: str):
-        return self.__bound_variables_store.add(concealed_value)
+        self.__tmp_banned_bound_variables_store.remove(concealed_value)
+        self.__bound_variables_store.add(concealed_value)
 
     # --------------------for debug------------------------
     def exit_struct_definitions(self):

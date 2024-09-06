@@ -8,12 +8,12 @@ init:
 
 .PHONY: run-dev
 run-dev:
-		docker-compose -f docker-compose.dev.yml up -d
+		docker-compose up -d
 
 .PHONY: run-dev-with-build
 run-dev-with-build:
-		docker-compose -f docker-compose.dev.yml up -d --build
+		docker-compose up -d --build
 
 .PHONY: down
 down:
-		docker-compose -f docker-compose.dev.yml down --remove-orphans
+		docker-compose down --remove-orphans

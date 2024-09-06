@@ -19,4 +19,4 @@ constraints:
 	All(ah) <- B(Ah), (|ah| == 9 && all_different(ah));
 	All(av) <- B(Av), (|av| == 9 && all_different(av));
 	|B(A)| == 1;
-	All(c) <- B(C), ([solution(c) == x] <=> [Exists(a) <- B(A), (All(aa) <- a, (!(c <- a))) && [{co | co <- connect(c, {H, V}) && solution(co) == x} == None]]);
+	All(c) <- B(C), ([solution(c) == x] <=> [Exists(a) <- B(A), (All(aa) <- a, (!(c <- a))) && [{co <- connect(c, {H, V}) | solution(co) == x} == None]]);

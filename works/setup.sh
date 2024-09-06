@@ -26,3 +26,6 @@ echo 'export CLASSPATH=".:/usr/local/lib/antlr-4.13.1-complete.jar:$CLASSPATH"' 
 # 4. set alias
 echo "alias antlr4='java -Xmx500M -cp "/usr/local/lib/antlr-4.13.1-complete.jar:\$CLASSPATH" org.antlr.v4.Tool'"  >> ~/.bashrc
 echo "alias grun='java -Xmx500M -cp "/usr/local/lib/antlr-4.13.1-complete.jar:\$CLASSPATH" org.antlr.v4.gui.TestRig'" >> ~/.bashrc
+
+# Install Taskfile
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
