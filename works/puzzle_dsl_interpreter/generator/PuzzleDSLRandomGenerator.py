@@ -249,8 +249,9 @@ class DomainValue(AlternativeRule):
             IntDomainValue,
             RangeValue,
             token.Null,
-            token.ConstantId,
         ]
+        if len(store.constants) >= 1:
+            choices.append(token.ConstantId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -519,7 +520,12 @@ class Int(AlternativeRule):
             self.RecursionInt,
         ]
         if store.exists_bound_variables():
-            choices += [SolutionFunction, CrossFunction, CycleFunction, IndexFunction]
+            choices += [
+                SolutionFunction,
+                CrossFunction,
+                CycleFunction,
+                # IndexFunction,
+            ]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -527,10 +533,10 @@ class Int(AlternativeRule):
 class PrimitiveValue(AlternativeRule):
     def __init__(self):
         choices = [
-            Int,
             token.Null,
-            token.ConstantId,
         ]
+        if len(store.constants) >= 1:
+            choices.append(token.ConstantId)
         if store.exists_bound_variables():
             choices.append(SolutionFunction)
         choice = lottery(choices, self.__class__.__name__)()
@@ -543,7 +549,7 @@ class Set(AlternativeRule):
             BFunction,
             GenerationSet,
         ]
-        if len(store.bound_variables) >= 1:
+        if len(store.ok_bound_variables) >= 1:
             choices += [StructElement, ConnectFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
@@ -910,6 +916,26 @@ class Boolean(AlternativeRule):
             super().__init__(order=order)
 
     class PrimitiveValueComparison(OrderRule):
+        class N_E(AlternativeRule):
+            def __init__(self):
+                choices = [
+                    token.NotEqual,
+                    token.Equal,
+                ]
+                choice = lottery(choices, self.__class__.__name__)()
+                super().__init__(choice=choice)
+
+        def __init__(self):
+            order = [
+                PrimitiveValue(),
+                token.Space(),
+                self.N_E(),
+                token.Space(),
+                PrimitiveValue(),
+            ]
+            super().__init__(order=order)
+
+    class IntValueComparison(OrderRule):
         class N_E_M_T(AlternativeRule):
             def __init__(self):
                 choices = [
@@ -923,22 +949,21 @@ class Boolean(AlternativeRule):
 
         def __init__(self):
             order = [
-                PrimitiveValue(),
+                Int(),
                 token.Space(),
                 self.N_E_M_T(),
                 token.Space(),
-                PrimitiveValue(),
+                Int(),
             ]
             super().__init__(order=order)
 
     def __init__(self):
         choices = [
-            # FillFunction,
-            # NoOverlapFunction,
             self.SetComparison,
-            # self.IntInInterger,
+            # self.IntInInterger, // Not to need
             self.SetEquality,
             self.PrimitiveValueComparison,
+            self.IntValueComparison,
         ]
         if store.exists_bound_variables():
             choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
@@ -948,6 +973,7 @@ class Boolean(AlternativeRule):
 
 class SingleBoolean(AlternativeRule):
     PREVENT_NOT_BOOLEAN = False
+    WEIGHT = 10
 
     def __init__(self):
         choices = [
@@ -1001,7 +1027,7 @@ class QuantifierBoolean(OrderRule):
 
 
 class CompoundBoolean(OrderRule):
-    WEIGHT = 10
+    WEIGHT = 100000
 
     class MultipleAdditionalBoolean(MultipleRule):
         def __init__(self):
@@ -1044,8 +1070,8 @@ class Constraint(AlternativeRule):
     def __init__(self):
         choices = [
             CompoundBoolean,
-            # FillFunction,
-            # NoOverlapFunction,
+            FillFunction,
+            NoOverlapFunction,
         ]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
@@ -1066,6 +1092,6 @@ class ConstraintDefinition(OrderRule):
 class ConstraintsDefinitions(MultipleRule):
     def __init__(self):
         rule = ConstraintDefinition
-        range = Range(min=3, max=5)
+        range = Range(min=1, max=3)
         order = repeat(rule, range)
         super().__init__(order=order)

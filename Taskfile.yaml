@@ -1,0 +1,34 @@
+version: '3'
+
+
+
+tasks:
+  init:
+    desc: setup development environment
+    cmds:
+      - pre-commit install
+      - code --install-extension charliermarsh.ruff > /dev/null 2>&1
+      - code --install-extension ms-python.mypy-type-checker > /dev/null 2>&1
+      - code --install-extension ms-python.python > /dev/null 2>&1
+      - code --install-extension ms-azuretools.vscode-docker > /dev/null 2>&1
+  install-pkgs:
+    desc: install packages for development environment
+    cmds:
+      - pip install pre-commit
+  run:
+    desc: startup container
+    cmds:
+      - docker compose up -d
+  run-with-build:
+    desc: startup container with build
+    cmds:
+      - docker compose up -d --build
+  run-from-scratch:
+    desc: startup container from scratch
+    cmds:
+      - docker compose build --no-cache
+      - docker compose up -d
+  down:
+    desc: stop and delete container
+    cmds:
+      - docker compose down --remove-orphans

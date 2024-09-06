@@ -5,7 +5,7 @@ import logging
 from rich.logging import RichHandler
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.ERROR,
     format="%(message)s",
     handlers=[
         RichHandler(markup=True, rich_tracebacks=True),
