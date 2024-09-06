@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from generator.definitions.errors import UnableToContinueError
 from generator.definitions.rules import RawToken
 from generator.definitions.token import Token, TokenType
 from generator.stores.context import Context
@@ -102,10 +101,7 @@ class ConstantId(RawToken):
             token = Token(type=type, ng=store.constants)
             store.register_constants(token.text)
         else:
-            try:
-                token = Token(type=type, ok=store.constants)
-            except UnableToContinueError:
-                pass
+            token = Token(type=type, ok=store.constants)
 
         super().__init__(token=token)
 
@@ -204,14 +200,14 @@ class BoundVariable(RawToken):
     def __init__(self):
         type = TokenType.BOUND_VARIABLE
         if store.context in [Context.STRUCT_ELEMENT]:
-            token = Token(type=type, ok=store.bound_variables)
+            token = Token(type=type, ok=store.ok_bound_variables)
         elif store.context in [
             Context.QUANTIFIER_BOOLEAN,
             Context.GENERATION_SET,
             Context.QUANTIFIER_INDEX,
             Context.INDEX_FUNCTION,
         ]:
-            token = Token(type=type, ng=store.bound_variables)
+            token = Token(type=type, ng=store.ng_bound_variables)
             store.register_bound_variables(token.text)
         else:
             token = Token(type=type)

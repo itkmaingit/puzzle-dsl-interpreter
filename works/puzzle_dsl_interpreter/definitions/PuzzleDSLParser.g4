@@ -147,7 +147,8 @@ indexFunction:
 // generation variables
 structElement: BOUND_VARIABLE;
 
-generationSet: LCURLY BOUND_VARIABLE PIPE constraint RCURLY;
+generationSet:
+	LCURLY BOUND_VARIABLE IN set PIPE constraint RCURLY;
 
 boolean:
 	fillFunction

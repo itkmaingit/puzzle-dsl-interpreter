@@ -1,0 +1,50 @@
+version: '3'
+
+tasks:
+  init:
+    desc: setup development environment
+    cmds:
+      - code --install-extension charliermarsh.ruff > /dev/null 2>&1
+      - code --install-extension ms-python.mypy-type-checker > /dev/null 2>&1
+      - code --install-extension ms-python.python > /dev/null 2>&1
+      - code --install-extension ms-python.vscode-pylance > /dev/null 2>&1
+      - code --install-extension mike-lischke.vscode-antlr4 > /dev/null 2>&1
+      - poetry config virtualenvs.in-project true
+      - poetry install --no-root
+
+  generate:
+    desc: The Task is to generate puzzle rules. Ex) task generate -- /path/to/output.pzl or task generate (console output.)
+    vars:
+      FILE: ""
+    cmds:
+      - bash scripts/convert_tabs_to_spaces.sh
+      - python scripts/convert_head_spaces_to_tabs.py
+      - |
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          poetry run python puzzle_dsl_interpreter/main.py --action generator
+        else
+          poetry run python puzzle_dsl_interpreter/main.py --action generator -o {{.FILE}}
+        fi
+
+  analyze:
+    desc: The task is to add analysis to the pzl file.
+    cmds:
+      - bash scripts/convert_tabs_to_spaces.sh
+      - python scripts/convert_head_spaces_to_tabs.py
+      - |
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo 'FILE variable is required. You have to execute as "task analyze -- /path/to/analyze.pzl"'
+        else
+          poetry run python puzzle_dsl_interpreter/main.py --action interpreter -f {{.CLI_ARGS}}
+        fi
+
+  test:
+    desc: The task is to execute tests.
+    cmds:
+      - poetry run pytest
+
+  example-analyze:
+    desc: The task is to carry out an analysis on an existing puzzle on a trial basis.
+    dir: scripts
+    cmds:
+      - bash ./all_test.sh
