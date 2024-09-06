@@ -827,6 +827,18 @@ class StructElement(SingleRule):
 
 
 class GenerationSet(OrderRule):
+    WEIGHT = -5
+
+    class SetWithoutGerationSet(AlternativeRule):
+        def __init__(self):
+            choices = [
+                BFunction,
+            ]
+            if len(store.ok_bound_variables) >= 1:
+                choices += [StructElement, ConnectFunction]
+            choice = lottery(choices, self.__class__.__name__)()
+            super().__init__(choice=choice)
+
     def __init__(self):
         store.enter(Context.GENERATION_SET, self.__class__.__name__)
         order = [
@@ -838,7 +850,7 @@ class GenerationSet(OrderRule):
             token.Space(),
         ]
         concealed_value = store.conceal_bound_variable()
-        order.append(Set())
+        order.append(self.SetWithoutGerationSet())
         store.register_bound_variables(concealed_value)
         order += [
             token.Space(),
@@ -1032,7 +1044,7 @@ class CompoundBoolean(OrderRule):
     class MultipleAdditionalBoolean(MultipleRule):
         def __init__(self):
             rule = self.AdditionalBoolean
-            range = Range(min=0, max=1)
+            range = Range(min=0, max=0)
             order = repeat(rule, range)
             super().__init__(order=order)
 
