@@ -1,8 +1,6 @@
-USERNAME=$1
-
 curl -sSL https://install.python-poetry.org | python3 -
-echo 'export PATH="/home/$USERNAME/.local/bin:$PATH"' >> ~/.bashrc
-export PATH="/home/$USERNAME/.local/bin:$PATH"
+echo 'export PATH="~/.local/bin:$PATH"' >> ~/.bashrc
+export PATH="~/.local/bin:$PATH"
 
 # Write special code below this for the environment you want to build.
 
