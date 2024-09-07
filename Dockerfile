@@ -10,4 +10,4 @@ USER $USERNAME
 WORKDIR /home/"$USERNAME"/works
 COPY ./works/setup.sh ./setup.sh
 
-RUN bash /home/$USERNAME/works/setup.sh $USERNAME
+RUN bash /home/$USERNAME/works/setup.sh
