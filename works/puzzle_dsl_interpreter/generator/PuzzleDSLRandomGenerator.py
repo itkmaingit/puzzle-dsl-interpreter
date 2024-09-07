@@ -343,6 +343,7 @@ class HiddenSet(OrderRule):
 
 
 # FIXME: いずれランダムに出力するようにする
+# TODO: DomainSet > HiddenSet/undecidedとなる出力を行う。
 class DomainDefinitionBody(OrderRule):
     def __init__(self):
         order = [
@@ -355,30 +356,30 @@ class DomainDefinitionBody(OrderRule):
         super().__init__(order=order)
 
     # for fixed states
-    def generate(self) -> list[Token]:
-        fixed_state = [
-            Token(type=TokenType.LCURLY),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.NUMBER, ok=["1"]),
-            Token(type=TokenType.DOTS),
-            Token(type=TokenType.NUMBER, ok=["4"]),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.RCURLY),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.RIGHT_ARROW),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.LCURLY),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.NUMBER, ok=["1"]),
-            Token(type=TokenType.DOTS),
-            Token(type=TokenType.NUMBER, ok=["4"]),
-            Token(type=TokenType.COMMA),
-            Token(type=TokenType.UNDECIDED),
-            Token(type=TokenType.SPACE),
-            Token(type=TokenType.RCURLY),
-        ]
+    # def generate(self) -> list[Token]:
+    #     fixed_state = [
+    #         Token(type=TokenType.LCURLY),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.NUMBER, ok=["1"]),
+    #         Token(type=TokenType.DOTS),
+    #         Token(type=TokenType.NUMBER, ok=["4"]),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.RCURLY),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.RIGHT_ARROW),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.LCURLY),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.NUMBER, ok=["1"]),
+    #         Token(type=TokenType.DOTS),
+    #         Token(type=TokenType.NUMBER, ok=["4"]),
+    #         Token(type=TokenType.COMMA),
+    #         Token(type=TokenType.UNDECIDED),
+    #         Token(type=TokenType.SPACE),
+    #         Token(type=TokenType.RCURLY),
+    #     ]
 
-        return fixed_state
+    #     return fixed_state
 
 
 class PDefinition(OrderRule):
@@ -827,7 +828,7 @@ class StructElement(SingleRule):
 
 
 class GenerationSet(OrderRule):
-    WEIGHT = -5
+    WEIGHT = -1
 
     class SetWithoutGerationSet(AlternativeRule):
         def __init__(self):
