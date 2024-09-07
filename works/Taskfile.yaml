@@ -11,6 +11,14 @@ tasks:
       - code --install-extension mike-lischke.vscode-antlr4 > /dev/null 2>&1
       - poetry config virtualenvs.in-project true
       - poetry install --no-root
+      - task build
+
+  build:
+    desc: Output parser file from g4 file. What you have to do is to execute `task build`.
+    vars: { PROJECT_PATH: "$HOME/works/puzzle_dsl_interpreter" }
+    cmds:
+      - java -jar /usr/local/lib/antlr-4.13.1-complete.jar -Dlanguage=Python3 -message-format antlr -o "{{.PROJECT_PATH}}"/parser -listener -visitor -Xexact-output-dir "{{.PROJECT_PATH}}"/definitions/PuzzleDSLLexer.g4
+      - java -jar /usr/local/lib/antlr-4.13.1-complete.jar -Dlanguage=Python3 -message-format antlr -o "{{.PROJECT_PATH}}"/parser -listener -visitor -Xexact-output-dir "{{.PROJECT_PATH}}"/definitions/PuzzleDSLParser.g4
 
   generate:
     desc: The Task is to generate puzzle rules. Ex) task generate -- /path/to/output.pzl or task generate (console output.)
