@@ -58,6 +58,9 @@ class Token(BaseModel):
             raise ValueError(f"No pattern found for token type: {type}")
         return pattern
 
+    def to_json(self):
+        return self.text
+
 
 class TokenType(IntEnum):
     STRUCTS_DECLARATION = auto()

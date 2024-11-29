@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from generator.definitions.json import JSONArray, JSONObject, Properties
 from generator.definitions.rules import (
     AlternativeRule,
     MultipleRule,
@@ -14,29 +15,23 @@ from generator.stores.store import store
 from generator.utils.logger import logger
 
 
-class File(OrderRule):
+class File(JSONObject):
     def __init__(self):
-        order = [
-            StructsDeclaration(),
-            StructDefinitions(),
-            token.Newline(),
-            DomainHiddenDeclaration(),
-            DomainDefinitions(),
-            # token.Newline(),
-            # ConstraintsDeclaration(),
-            # ConstraintsDefinitions(),
-        ]
-        super().__init__(order=order)
-
-    def to_json(self):
-        struct_definitions = self.get(1).to_json()
-        domain_definitions = self.get(4).to_json()
-        # constraints_definitions = self.__order[7]
-        return {
-            "structs": struct_definitions,
-            "domain": domain_definitions,
-            # "constraints": constraints_definitions.to_json(),
+        propeties: Properties = {
+            "struct": StructDefinitions(),
+            "domain": DomainDefinitions(),
+            "constraints": ConstraintsDefinitions(),
         }
+        super().__init__(properties=propeties)
+
+
+class StructDefinitions(JSONArray):
+    def __init__(self):
+        range = Range(min=1, max=3)
+        rule = StructDefinition
+        order = repeat(rule, range)
+        super().__init__(order=order)
+        store.exit_struct_definitions()
 
 
 class StructsDeclaration(OrderRule):
@@ -82,9 +77,6 @@ class StructId(AlternativeRule):
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
-    def to_json(self):
-        return self.choice.to_json()
-
 
 class StructDefinitionBody(OrderRule):
     def __init__(self):
@@ -100,14 +92,6 @@ class StructDefinitionBody(OrderRule):
         ]
         super().__init__(order=order)
         store.exit(self.__class__.__name__)
-
-    @property
-    def base(self):
-        return self.get(2)
-
-    @property
-    def relationship(self):
-        return self.get(5)
 
 
 class StructDefinition(OrderRule):
@@ -127,32 +111,6 @@ class StructDefinition(OrderRule):
         store.exit(self.__class__.__name__)
 
 
-class StructDefinitions(MultipleRule):
-    def __init__(self):
-        range = Range(min=1, max=3)
-        rule = StructDefinition
-        order = repeat(rule, range)
-        super().__init__(order=order)
-        store.exit_struct_definitions()
-
-    def to_json(self):
-        properties: list[dict] = []
-        for el in self.order:
-            if isinstance(el, OrderRule):
-                name = el.get(1).to_json()
-                base = el.get(5).base.to_json()
-                relationship = el.get(5).relationship.to_json()
-                property = {
-                    "name": name,
-                    "base": base,
-                    "relationship": relationship,
-                }
-                properties.append(property)
-            else:
-                logger.debug("誤った型に入力されています。")
-        return properties
-
-
 class RelationshipSetBody(OrderRule):
     class AdditionalRelationshipId(MultipleRule):
         class RelationshipIdWithComma(OrderRule):
@@ -163,10 +121,6 @@ class RelationshipSetBody(OrderRule):
                     token.RelationshipId(),
                 ]
                 super().__init__(order=order)
-
-            def to_json(self):
-                relationship = self.get(2)
-                return relationship.to_json()
 
         def __init__(self):
             rule = self.RelationshipIdWithComma
@@ -194,10 +148,6 @@ class RelationshipSet(OrderRule):
             token.RCurly(),
         ]
         super().__init__(order=order)
-
-    def to_json(self):
-        relationships = self.get(2).to_json()
-        return relationships
 
 
 # FIXME: 出現確率に偏りがある(Numberが出ない)
@@ -258,11 +208,11 @@ class IntDomainValue(AlternativeRule):
 
     def __init__(self):
         choices = [
-            # self.IntDomainValue_1,
-            # self.IntDomainValue_2,
+            self.IntDomainValue_1,
+            self.IntDomainValue_2,
             token.Width,
             token.Height,
-            # self.IntDomainValue_5,
+            self.IntDomainValue_5,
             token.Number,
         ]
         choice = lottery(choices, self.__class__.__name__)()
@@ -292,16 +242,13 @@ class DomainValue(AlternativeRule):
     def __init__(self):
         choices = [
             IntDomainValue,
-            # RangeValue,
+            RangeValue,
             token.Null,
         ]
         if len(store.constants) >= 1:
             choices.append(token.ConstantId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
-
-    def to_json(self):
-        return self.choice.to_json()
 
 
 class DomainSetBody(OrderRule):
@@ -320,13 +267,6 @@ class DomainSetBody(OrderRule):
             range = Range(min=1, max=2)
             order = repeat(rule, range)
             super().__init__(order=order)
-
-        def to_json(self):
-            ret = []
-            for el in self.order:
-                ret += el.get(2).to_json()
-                logger.debug(el.get(2).to_json())
-            return ret
 
     def __init__(self):
         store.enter(Context.DOMAIN_SET_BODY, self.__class__.__name__)
@@ -349,10 +289,6 @@ class DomainSet(OrderRule):
         ]
         super().__init__(order=order)
 
-    def to_json(self):
-        ret = self.get(2).to_json()
-        return ret
-
 
 class HiddenValue(AlternativeRule):
     def __init__(self):
@@ -374,10 +310,6 @@ class HiddenSetBody(OrderRule):
                     HiddenValue(),
                 ]
                 super().__init__(order=order)
-
-            def to_json(self):
-                ret = self.get(2).to_json()
-                return ret
 
         def __init__(self):
             rule = self.HiddenValueWithComma
@@ -404,10 +336,6 @@ class HiddenSet(OrderRule):
         ]
         super().__init__(order=order)
 
-    def to_json(self):
-        ret = self.get(2).to_json()
-        return ret
-
 
 # FIXME: いずれランダムに出力するようにする
 # TODO: DomainSet > HiddenSet/undecidedとなる出力を行う。
@@ -421,11 +349,6 @@ class DomainDefinitionBody(OrderRule):
             HiddenSet(),
         ]
         super().__init__(order=order)
-
-    def to_json(self):
-        domain = self.get(0).to_json()
-        hidden = self.get(4).to_json()
-        return domain, hidden
 
     # for fixed states
     # def generate(self) -> list[Token]:
@@ -468,16 +391,6 @@ class PDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
-    def to_json(self):
-        name = self.get(1).to_json()
-        domain, hidden = self.get(5).to_json()
-        ret = {
-            "name": name,
-            "domain": domain,
-            "hidden": hidden,
-        }
-        return ret
-
 
 class CDefinition(OrderRule):
     def __init__(self):
@@ -492,15 +405,6 @@ class CDefinition(OrderRule):
             token.Newline(),
         ]
         super().__init__(order=order)
-
-    def to_json(self):
-        name = self.get(1).to_json()
-        domain, hidden = self.get(5).to_json()
-        return {
-            "name": name,
-            "domain": domain,
-            "hidden": hidden,
-        }
 
 
 class EPDefinition(OrderRule):
@@ -517,15 +421,6 @@ class EPDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
-    def to_json(self):
-        name = self.get(1).to_json()
-        domain, hidden = self.get(5).to_json()
-        return {
-            "name": name,
-            "domain": domain,
-            "hidden": hidden,
-        }
-
 
 class ECDefinition(OrderRule):
     def __init__(self):
@@ -541,15 +436,6 @@ class ECDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
-    def to_json(self):
-        name = self.get(1).to_json()
-        domain, hidden = self.get(5).to_json()
-        return {
-            "name": name,
-            "domain": domain,
-            "hidden": hidden,
-        }
-
 
 class CustomStructDefinition(OrderRule):
     def __init__(self):
@@ -564,15 +450,6 @@ class CustomStructDefinition(OrderRule):
             token.Newline(),
         ]
         super().__init__(order=order)
-
-    def to_json(self):
-        name = self.get(1).to_json()
-        domain, hidden = self.get(5).to_json()
-        return {
-            "name": name,
-            "domain": domain,
-            "hidden": hidden,
-        }
 
 
 class DomainDefinitions(OrderRule):

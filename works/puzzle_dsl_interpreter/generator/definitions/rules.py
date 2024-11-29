@@ -62,6 +62,9 @@ class RawToken(BaseRule):
     def generate(self) -> list[Token]:
         return [self.__token]
 
+    def to_json(self):
+        return self.__token.to_json()
+
 
 class AlternativeRule(BaseRule):
     def __init__(self, choice: BaseRule):
@@ -69,6 +72,13 @@ class AlternativeRule(BaseRule):
 
     def generate(self) -> list[Token]:
         return self.__choice.generate()
+
+    @property
+    def choice(self):
+        return self.__choice
+
+    def to_json(self):
+        return self.choice.to_json()
 
 
 # 複数回実行
@@ -81,6 +91,19 @@ class MultipleRule(BaseRule):
         for el in self.__order:
             result += el.generate()
         return result
+
+    def get(self, index: int):
+        return self.__order[index]
+
+    @property
+    def order(self):
+        return self.__order
+
+    def to_json(self):
+        ret = []
+        for el in self.order:
+            ret += el.to_json()
+        return ret
 
 
 # 直列実行
@@ -100,6 +123,19 @@ class OrderRule(BaseRule):
         for rule in self.__order:
             result += rule.generate()
         return result
+
+    def get(self, index: int):
+        return self.__order[index]
+
+    @property
+    def order(self):
+        return self.__order
+
+    def to_json(self):
+        ret = []
+        for el in self.order:
+            ret += el.to_json()
+        return ret
 
 
 class SingleRule(BaseRule):

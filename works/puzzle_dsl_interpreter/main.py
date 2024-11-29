@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
 from antlr4 import FileStream
 from errors.error import InvalidArgumentsError
@@ -13,14 +12,15 @@ from interpreter.PuzzleDSLInterpreter import PuzzleDSLInterpreter
 def generate(filepath: str):
     sys.setrecursionlimit(2000)
     generator = File()
-    sentence = ""
-    for token in generator.generate():
-        sentence += token.text
-    if filepath:
-        with Path(filepath).open(mode="w", encoding="utf-8") as f:
-            f.write(sentence)
-    else:
-        print(sentence)
+    # for token in generator.generate():
+    #     sentence += token.text
+    # if filepath:
+    #     with Path(filepath).open(mode="w", encoding="utf-8") as f:
+    #         f.write(sentence)
+    # else:
+    #     print(sentence)
+
+    print(generator.to_json())
 
 
 def interpret(filepath: str):
