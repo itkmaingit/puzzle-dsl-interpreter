@@ -10,5 +10,19 @@
       "printParseTree": true, // デバッグ結果をデバッグコンソールに表示するか
       "visualParseTree": true // デバッグ結果をグラフィカルなツリーで表示するか
     },
+    {
+      "name": "generator debug",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/puzzle_dsl_interpreter/main.py",
+      "args": [
+        "--action",
+        "generator"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    }
   ]
 }
