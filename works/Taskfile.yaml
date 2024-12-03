@@ -1,4 +1,5 @@
 version: '3'
+silent: true
 
 tasks:
   init:
@@ -31,7 +32,7 @@ tasks:
         if [ -z "{{.CLI_ARGS}}" ]; then
           poetry run python puzzle_dsl_interpreter/main.py --action generator
         else
-          poetry run python puzzle_dsl_interpreter/main.py --action generator -o {{.FILE}}
+          poetry run python puzzle_dsl_interpreter/main.py --action generator -o {{.CLI_ARGS}}
         fi
 
   analyze:
