@@ -6,6 +6,7 @@ from enum import IntEnum, auto
 
 import exrex
 from generator.definitions.errors import UnableToContinueError
+from generator.stores.store import store
 from generator.utils.logger import logger
 from pydantic import BaseModel
 
@@ -37,8 +38,8 @@ class Token(BaseModel):
             in_ng = True
             while in_ng:
                 if i > LIMIT:
-                    print(i)
-                    print(" 適切な変数を選べませんでした。")
+                    logger.debug(" 適切な変数を選べませんでした。")
+                    store.initialize()
                     raise RecursionError
                 text = exrex.getone(pattern)
                 in_ng = text in ng

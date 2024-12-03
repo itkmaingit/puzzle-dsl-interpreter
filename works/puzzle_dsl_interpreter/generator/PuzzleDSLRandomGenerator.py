@@ -76,11 +76,11 @@ class StructId(AlternativeRule):
             token.EP,
             token.EC,
         ]
-        if (
-            store.count_new_structs >= 2
-            or store.context != Context.STRUCT_DEFINITION_BODY
-        ):
-            choices.append(token.NewStructId)
+        # if (
+        #     store.count_new_structs >= 2
+        #     or store.context != Context.STRUCT_DEFINITION_BODY
+        # ):
+        #     choices.append(token.NewStructId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
         store.register_target_structs(choice.to_json())
@@ -129,7 +129,7 @@ class StructDefinition(OrderRule):
 
 class StructDefinitions(MultipleRule):
     def __init__(self):
-        range = Range(min=1, max=3)
+        range = Range(min=0, max=0)
         rule = StructDefinition
         order = repeat(rule, range)
         super().__init__(order=order)
@@ -772,7 +772,7 @@ class CrossFunction(OrderRule):
 
     def to_json(self):
         ret = {
-            "type": "boolean",
+            "type": "value",
             "name": "cross",
             "args": {"variable": self.get(2).to_json()},
         }
@@ -791,7 +791,7 @@ class CycleFunction(OrderRule):
 
     def to_json(self):
         ret = {
-            "type": "boolean",
+            "type": "value",
             "name": "cycle",
             "args": {"variable": self.get(2).to_json()},
         }
@@ -1297,7 +1297,8 @@ class Boolean(AlternativeRule):
 
         def to_json(self):
             ret = {
-                "name": "primitive_value_comparison",
+                "type": "boolean",
+                "name": "int_value_comparison",
                 "properties": {"op": self.get(2).to_json()},
                 "args": {
                     "left": self.get(0).to_json(),

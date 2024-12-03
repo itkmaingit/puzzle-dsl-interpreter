@@ -9,25 +9,7 @@ from generator.utils.logger import logger
 
 class StateStore:
     def __init__(self):
-        self.__defined_struct_store = VariableStore(
-            is_deletable=False,
-        )  # Forbidden to delete element
-        self.__constants_store = VariableStore(
-            is_deletable=False,
-        )  # Forbidden to delete element
-
-        self.__new_struct_store = VariableStore(is_deletable=True)
-        self.__relationship_store = VariableStore(is_deletable=True)
-        self.__bound_variables_store = VariableStore(is_deletable=True)
-        self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
-        self.__target_structs_store = VariableStore(
-            is_deletable=True,
-            is_duplicatable=True,
-        )
-
-        self.__ctx_store = ContextStore()
-
-        self.__defined_struct_store.add_all(["P", "C", "Ep", "Ec"])
+        self.initialize()
 
     @property
     def context(self) -> Context:
@@ -156,6 +138,27 @@ class StateStore:
 
     def remove_bound_variable(self, bound_variable: str):
         self.__bound_variables_store.remove(bound_variable)
+
+    def initialize(self):
+        self.__defined_struct_store = VariableStore(
+            is_deletable=False,
+        )  # Forbidden to delete element
+        self.__constants_store = VariableStore(
+            is_deletable=False,
+        )  # Forbidden to delete element
+
+        self.__new_struct_store = VariableStore(is_deletable=True)
+        self.__relationship_store = VariableStore(is_deletable=True)
+        self.__bound_variables_store = VariableStore(is_deletable=True)
+        self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
+        self.__target_structs_store = VariableStore(
+            is_deletable=True,
+            is_duplicatable=True,
+        )
+
+        self.__ctx_store = ContextStore()
+
+        self.__defined_struct_store.add_all(["P", "C", "Ep", "Ec"])
 
     # --------------------for debug------------------------
     def exit_struct_definitions(self):

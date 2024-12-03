@@ -51,9 +51,18 @@ tasks:
     desc: The task is to execute tests.
     cmds:
       - poetry run pytest
+  gotest:
+    desc: The task is to execute gotests.
+    dir: puzzle_dsl_interpreter/generator/go
+    cmds:
+      - go test -v
 
   example-analyze:
     desc: The task is to carry out an analysis on an existing puzzle on a trial basis.
     dir: scripts
     cmds:
       - bash ./all_test.sh
+
+  poc:
+    cmds:
+      - poetry run python3 puzzle_dsl_interpreter/poc/poc.py
