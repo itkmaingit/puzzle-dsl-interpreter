@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 from generator.definitions.rules import (
     AlternativeRule,
     MultipleRule,
@@ -7,7 +9,6 @@ from generator.definitions.rules import (
     Range,
     SingleRule,
 )
-from generator.definitions.token import Token, TokenType
 from generator.helpers import token
 from generator.helpers.operators import lottery, repeat
 from generator.stores.context import Context
@@ -28,6 +29,16 @@ class File(OrderRule):
             ConstraintsDefinitions(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        struct_definitions = self.get(1).to_json()
+        domain_definitions = self.get(4).to_json()
+        constraints_definitions = self.get(7).to_json()
+        return {
+            "structs": struct_definitions,
+            "domain": domain_definitions,
+            "constraints": constraints_definitions,
+        }
 
 
 class StructsDeclaration(OrderRule):
@@ -72,6 +83,7 @@ class StructId(AlternativeRule):
             choices.append(token.NewStructId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
+        store.register_target_structs(choice.to_json())
 
 
 class StructDefinitionBody(OrderRule):
@@ -88,6 +100,14 @@ class StructDefinitionBody(OrderRule):
         ]
         super().__init__(order=order)
         store.exit(self.__class__.__name__)
+
+    @property
+    def base(self):
+        return self.get(2)
+
+    @property
+    def relationship(self):
+        return self.get(5)
 
 
 class StructDefinition(OrderRule):
@@ -115,6 +135,23 @@ class StructDefinitions(MultipleRule):
         super().__init__(order=order)
         store.exit_struct_definitions()
 
+    def to_json(self):
+        properties: list[dict] = []
+        for el in self.order:
+            if isinstance(el, OrderRule):
+                name = el.get(1).to_json()
+                base = el.get(5).base.to_json()
+                relationship = el.get(5).relationship.to_json()
+                property = {
+                    "name": name,
+                    "base": base,
+                    "relationship": relationship,
+                }
+                properties.append(property)
+            else:
+                logger.debug("誤った型に入力されています。")
+        return properties
+
 
 class RelationshipSetBody(OrderRule):
     class AdditionalRelationshipId(MultipleRule):
@@ -126,6 +163,10 @@ class RelationshipSetBody(OrderRule):
                     token.RelationshipId(),
                 ]
                 super().__init__(order=order)
+
+            def to_json(self):
+                relationship = self.get(2)
+                return relationship.to_json()
 
         def __init__(self):
             rule = self.RelationshipIdWithComma
@@ -153,6 +194,10 @@ class RelationshipSet(OrderRule):
             token.RCurly(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        relationships = self.get(2).to_json()
+        return relationships
 
 
 # FIXME: 出現確率に偏りがある(Numberが出ない)
@@ -213,11 +258,11 @@ class IntDomainValue(AlternativeRule):
 
     def __init__(self):
         choices = [
-            self.IntDomainValue_1,
-            self.IntDomainValue_2,
+            # self.IntDomainValue_1,
+            # self.IntDomainValue_2,
             token.Width,
             token.Height,
-            self.IntDomainValue_5,
+            # self.IntDomainValue_5,
             token.Number,
         ]
         choice = lottery(choices, self.__class__.__name__)()
@@ -247,13 +292,16 @@ class DomainValue(AlternativeRule):
     def __init__(self):
         choices = [
             IntDomainValue,
-            RangeValue,
+            # RangeValue,
             token.Null,
         ]
         if len(store.constants) >= 1:
             choices.append(token.ConstantId)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
+
+    def to_json(self):
+        return self.choice.to_json()
 
 
 class DomainSetBody(OrderRule):
@@ -267,11 +315,24 @@ class DomainSetBody(OrderRule):
                 ]
                 super().__init__(order=order)
 
+            def to_json(self):
+                ret = self.get(2).to_json()
+                return ret
+
         def __init__(self):
             rule = self.DomainValueWithComma
             range = Range(min=1, max=2)
             order = repeat(rule, range)
             super().__init__(order=order)
+
+        def to_json(self):
+            ret = []
+            for el in self.order:
+                if isinstance(el.get(2).to_json(), list):
+                    ret.extend(el.get(2).to_json())
+                else:
+                    ret.append(el.get(2).to_json())
+            return ret
 
     def __init__(self):
         store.enter(Context.DOMAIN_SET_BODY, self.__class__.__name__)
@@ -294,6 +355,10 @@ class DomainSet(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = self.get(2).to_json()
+        return ret
+
 
 class HiddenValue(AlternativeRule):
     def __init__(self):
@@ -315,6 +380,10 @@ class HiddenSetBody(OrderRule):
                     HiddenValue(),
                 ]
                 super().__init__(order=order)
+
+            def to_json(self):
+                ret = self.get(2).to_json()
+                return ret
 
         def __init__(self):
             rule = self.HiddenValueWithComma
@@ -341,6 +410,10 @@ class HiddenSet(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = self.get(2).to_json()
+        return ret
+
 
 # FIXME: いずれランダムに出力するようにする
 # TODO: DomainSet > HiddenSet/undecidedとなる出力を行う。
@@ -354,6 +427,11 @@ class DomainDefinitionBody(OrderRule):
             HiddenSet(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        domain = self.get(0).to_json()
+        hidden = self.get(4).to_json()
+        return domain, hidden
 
     # for fixed states
     # def generate(self) -> list[Token]:
@@ -396,6 +474,18 @@ class PDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        name = self.get(1).to_json()
+        domain, hidden = self.get(5).to_json()
+        logger.debug(domain)
+        logger.debug(hidden)
+        ret = {
+            "name": name,
+            "domain": domain,
+            "hidden": hidden,
+        }
+        return ret
+
 
 class CDefinition(OrderRule):
     def __init__(self):
@@ -410,6 +500,15 @@ class CDefinition(OrderRule):
             token.Newline(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        name = self.get(1).to_json()
+        domain, hidden = self.get(5).to_json()
+        return {
+            "name": name,
+            "domain": domain,
+            "hidden": hidden,
+        }
 
 
 class EPDefinition(OrderRule):
@@ -426,6 +525,15 @@ class EPDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        name = self.get(1).to_json()
+        domain, hidden = self.get(5).to_json()
+        return {
+            "name": name,
+            "domain": domain,
+            "hidden": hidden,
+        }
+
 
 class ECDefinition(OrderRule):
     def __init__(self):
@@ -441,6 +549,15 @@ class ECDefinition(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        name = self.get(1).to_json()
+        domain, hidden = self.get(5).to_json()
+        return {
+            "name": name,
+            "domain": domain,
+            "hidden": hidden,
+        }
+
 
 class CustomStructDefinition(OrderRule):
     def __init__(self):
@@ -455,6 +572,15 @@ class CustomStructDefinition(OrderRule):
             token.Newline(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        name = self.get(1).to_json()
+        domain, hidden = self.get(5).to_json()
+        return {
+            "name": name,
+            "domain": domain,
+            "hidden": hidden,
+        }
 
 
 class DomainDefinitions(OrderRule):
@@ -503,6 +629,18 @@ class Int(AlternativeRule):
             ]
             super().__init__(order=order)
 
+        def to_json(self):
+            ret = {
+                "type": "value",
+                "name": "int_operation",
+                "properties": {"op": self.get(2).to_json()},
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
+
     class AbsoluteSet(OrderRule):
         def __init__(self):
             order = [
@@ -511,6 +649,13 @@ class Int(AlternativeRule):
                 token.RightAbsolute(),
             ]
             super().__init__(order=order)
+
+        def to_json(self):
+            ret = {
+                "name": "absolute_set",
+                "args": self.get(1).to_json(),
+            }
+            return ret
 
     def __init__(self):
         choices = [
@@ -530,6 +675,15 @@ class Int(AlternativeRule):
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
+    def to_json(self):
+        args = super().to_json()
+        ret = {
+            "type": "value",
+            "name": "int",
+            "args": {"value": copy.deepcopy(args)},
+        }
+        return ret
+
 
 class PrimitiveValue(AlternativeRule):
     def __init__(self):
@@ -542,6 +696,14 @@ class PrimitiveValue(AlternativeRule):
             choices.append(SolutionFunction)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
+
+    def to_json(self):
+        ret = {
+            "type": "value",
+            "name": "primitive",
+            "args": {"value": super().to_json()},
+        }
+        return ret
 
 
 class Set(AlternativeRule):
@@ -566,6 +728,14 @@ class SolutionFunction(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = {
+            "type": "value",
+            "name": "solution",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
+
 
 class BFunction(OrderRule):
     WEIGHT = 1
@@ -581,6 +751,14 @@ class BFunction(OrderRule):
         super().__init__(order=order)
         store.exit(self.__class__.__name__)
 
+    def to_json(self):
+        ret = {
+            "type": "set",
+            "name": "B",
+            "args": {"struct": self.get(2).to_json()},
+        }
+        return ret
+
 
 class CrossFunction(OrderRule):
     def __init__(self):
@@ -591,6 +769,14 @@ class CrossFunction(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "cross",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
 
 
 class CycleFunction(OrderRule):
@@ -603,6 +789,14 @@ class CycleFunction(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "cycle",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
+
 
 class AllDifferentFunction(OrderRule):
     def __init__(self):
@@ -613,6 +807,14 @@ class AllDifferentFunction(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "all_different",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
 
 
 class IsRectangleFunction(OrderRule):
@@ -625,6 +827,14 @@ class IsRectangleFunction(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "is_rectangle",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
+
 
 class IsSquareFunction(OrderRule):
     def __init__(self):
@@ -635,6 +845,14 @@ class IsSquareFunction(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "is_square",
+            "args": {"variable": self.get(2).to_json()},
+        }
+        return ret
 
 
 class ConnectFunction(OrderRule):
@@ -650,6 +868,17 @@ class ConnectFunction(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = {
+            "type": "set",
+            "name": "connect",
+            "args": {
+                "variable": self.get(2).to_json(),
+                "relationship": self.get(5).to_json(),
+            },
+        }
+        return ret
+
 
 class NoOverlapFunction(OrderRule):
     class MultipleNewStructID(MultipleRule):
@@ -662,9 +891,13 @@ class NoOverlapFunction(OrderRule):
                 ]
                 super().__init__(order=order)
 
+            def to_json(self):
+                ret = self.get(2).to_json()
+                return ret
+
         def __init__(self):
             rule = self.NewStructIdWithComma
-            range = Range(min=1, max=store.count_new_structs - 1)
+            range = Range(min=0, max=store.count_new_structs - 1)
             order = repeat(rule, range)
             super().__init__(order=order)
 
@@ -680,6 +913,16 @@ class NoOverlapFunction(OrderRule):
         super().__init__(order=order)
         store.exit_board_function()
 
+    def to_json(self):
+        args = [self.get(2).to_json()]
+        args += self.get(3).to_json()
+        ret = {
+            "type": "boolean",
+            "name": "no_overlap",
+            "args": args,
+        }
+        return ret
+
 
 class FillFunction(OrderRule):
     class MultipleNewStructID(MultipleRule):
@@ -692,9 +935,13 @@ class FillFunction(OrderRule):
                 ]
                 super().__init__(order=order)
 
+            def to_json(self):
+                ret = self.get(2).to_json()
+                return ret
+
         def __init__(self):
             rule = self.NewStructIdWithComma
-            range = Range(min=1, max=store.count_new_structs - 1)
+            range = Range(min=0, max=store.count_new_structs - 1)
             order = repeat(rule, range)
             super().__init__(order=order)
 
@@ -709,6 +956,16 @@ class FillFunction(OrderRule):
         ]
         super().__init__(order=order)
         store.exit_board_function()
+
+    def to_json(self):
+        args = [self.get(2).to_json()]
+        args += self.get(3).to_json()
+        ret = {
+            "type": "boolean",
+            "name": "fill",
+            "args": args,
+        }
+        return ret
 
 
 class Quantifier(OrderRule):
@@ -735,6 +992,18 @@ class Quantifier(OrderRule):
         order += [Set()]
         store.restore_bound_variable(concealed_value)
         super().__init__(order=order)
+
+    def cleanup(self):
+        store.remove_bound_variable(self.get(2).text)
+
+    @property
+    def properties(self):
+        ret = {
+            "quantifier": self.get(0).to_json(),
+            "variable": self.get(2).to_json(),
+            "universal_set": self.get(7).to_json(),
+        }
+        return ret
 
 
 class Index(OrderRule):
@@ -826,9 +1095,13 @@ class StructElement(SingleRule):
         super().__init__(rule=rule)
         store.exit(self.__class__.__name__)
 
+    def cleanup(self):
+        store.remove_bound_variable(self.text)
 
+
+## NOTE: WEIGHTを1以上にすると、再帰エラーが発生する。
 class GenerationSet(OrderRule):
-    WEIGHT = -1
+    WEIGHT = -3
 
     class SetWithoutGerationSet(AlternativeRule):
         def __init__(self):
@@ -862,7 +1135,19 @@ class GenerationSet(OrderRule):
             token.RCurly(),
         ]
         super().__init__(order=order)
-        store.exit_with_cleanup(self.__class__.__name__)
+        store.remove_bound_variable(self.get(2).text)
+
+    def to_json(self):
+        ret = {
+            "type": "set",
+            "name": "generation_set",
+            "properties": {
+                "variable": self.get(2).to_json(),
+                "universal_set": self.get(6).to_json(),
+                "filter": self.get(10).to_json(),
+            },
+        }
+        return ret
 
 
 class Boolean(AlternativeRule):
@@ -887,6 +1172,20 @@ class Boolean(AlternativeRule):
                 Set(),
             ]
             super().__init__(order=order)
+
+        def to_json(self):
+            ret = {
+                "type": "boolean",
+                "name": "set_comparison",
+                "properties": {
+                    "op": self.get(2).to_json(),
+                },
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
 
     # class IntInInterger(OrderRule):
     #     def __init__(self):
@@ -928,6 +1227,20 @@ class Boolean(AlternativeRule):
             ]
             super().__init__(order=order)
 
+        def to_json(self):
+            ret = {
+                "type": "boolean",
+                "name": "set_equation",
+                "properties": {
+                    "op": self.get(2).to_json(),
+                },
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
+
     class PrimitiveValueComparison(OrderRule):
         class N_E(AlternativeRule):
             def __init__(self):
@@ -947,6 +1260,18 @@ class Boolean(AlternativeRule):
                 PrimitiveValue(),
             ]
             super().__init__(order=order)
+
+        def to_json(self):
+            ret = {
+                "type": "boolean",
+                "name": "primitive_value_comparison",
+                "properties": {"op": self.get(2).to_json()},
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
 
     class IntValueComparison(OrderRule):
         class N_E_M_T(AlternativeRule):
@@ -970,18 +1295,33 @@ class Boolean(AlternativeRule):
             ]
             super().__init__(order=order)
 
+        def to_json(self):
+            ret = {
+                "name": "primitive_value_comparison",
+                "properties": {"op": self.get(2).to_json()},
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
+
     def __init__(self):
         choices = [
             self.SetComparison,
             # self.IntInInterger, // Not to need
             self.SetEquality,
-            self.PrimitiveValueComparison,
+            # self.PrimitiveValueComparison,
             self.IntValueComparison,
         ]
         if store.exists_bound_variables():
             choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
+
+    def to_json(self):
+        ret = self.choice.to_json()
+        return ret
 
 
 class SingleBoolean(AlternativeRule):
@@ -1013,6 +1353,14 @@ class NotBoolean(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "not",
+            "args": self.get(2).to_json(),
+        }
+        return ret
+
 
 class ParenthesizedBoolean(OrderRule):
     def __init__(self):
@@ -1022,6 +1370,10 @@ class ParenthesizedBoolean(OrderRule):
             token.RBracket(),
         ]
         super().__init__(order=order)
+
+    def to_json(self):
+        ret = self.get(1).to_json()
+        return ret
 
 
 class QuantifierBoolean(OrderRule):
@@ -1036,18 +1388,58 @@ class QuantifierBoolean(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
-        store.exit_with_cleanup(self.__class__.__name__)
+        self.get(0).cleanup()
+
+    def to_json(self):
+        ret = {
+            "type": "boolean",
+            "name": "quantifier",
+            "properties": self.get(0).properties,
+            "args": self.get(4).to_json(),
+        }
+        return ret
 
 
 class CompoundBoolean(OrderRule):
-    WEIGHT = 100000
-
     class MultipleAdditionalBoolean(MultipleRule):
         def __init__(self):
             rule = self.AdditionalBoolean
-            range = Range(min=0, max=0)
+            range = Range(min=0, max=1)
             order = repeat(rule, range)
             super().__init__(order=order)
+
+        @property
+        def size(self):
+            return len(self.order)
+
+        def to_json(self):
+            ret = {}
+            for i, el in reversed(list(enumerate(self.order))):
+                if i == len(self.order) - 1:
+                    ret = {
+                        "type": "boolean",
+                        "name": "compound",
+                        "properties": {
+                            "op": el.op,
+                        },
+                        "args": {
+                            "right": el.boolean,
+                        },
+                    }
+                else:
+                    ret["args"]["left"] = el.boolean
+                    ret = {
+                        "type": "boolean",
+                        "name": "compound",
+                        "properties": {
+                            "op": el.op,
+                        },
+                        "args": {
+                            "right": copy.deepcopy(ret),
+                        },
+                    }
+
+            return ret
 
         class AdditionalBoolean(OrderRule):
             class A_O_T_E(AlternativeRule):
@@ -1070,6 +1462,14 @@ class CompoundBoolean(OrderRule):
                 ]
                 super().__init__(order=order)
 
+            @property
+            def op(self):
+                return self.get(1).to_json()
+
+            @property
+            def boolean(self):
+                return self.get(3).to_json()
+
     def __init__(self):
         order = [
             SingleBoolean(),
@@ -1077,14 +1477,23 @@ class CompoundBoolean(OrderRule):
         ]
         super().__init__(order=order)
 
+    def to_json(self):
+        if self.get(1).size >= 1:
+            ret = self.get(1).to_json()
+            ret["args"]["left"] = self.get(0).to_json()
+        else:
+            ret = self.get(0).to_json()
+
+        return ret
+
 
 # TODO: Apply FillFunction and NoOverlapFunction
 class Constraint(AlternativeRule):
     def __init__(self):
         choices = [
             CompoundBoolean,
-            FillFunction,
-            NoOverlapFunction,
+            # FillFunction,
+            # NoOverlapFunction,
         ]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
@@ -1092,19 +1501,33 @@ class Constraint(AlternativeRule):
 
 class ConstraintDefinition(OrderRule):
     def __init__(self):
+        while True:
+            store.enter_constraint_definition()
+            constraint = Constraint()
+            store.exit_constraint_definition()
+            if len(store.target_structs) == 0:
+                continue
+            break
         order = [
             token.Indent(),
-            Constraint(),
+            constraint,
             token.Semi(),
             token.Newline(),
         ]
         super().__init__(order=order)
-        store.exit_constraint_definition()
+        self.__target_structs = store.target_structs
+
+    def to_json(self):
+        ret = {
+            "targets": self.__target_structs,
+            "constraint": self.get(1).to_json(),
+        }
+        return ret
 
 
 class ConstraintsDefinitions(MultipleRule):
     def __init__(self):
         rule = ConstraintDefinition
-        range = Range(min=1, max=3)
+        range = Range(min=2, max=3)
         order = repeat(rule, range)
         super().__init__(order=order)

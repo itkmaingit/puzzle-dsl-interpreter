@@ -20,6 +20,10 @@ class StateStore:
         self.__relationship_store = VariableStore(is_deletable=True)
         self.__bound_variables_store = VariableStore(is_deletable=True)
         self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
+        self.__target_structs_store = VariableStore(
+            is_deletable=True,
+            is_duplicatable=True,
+        )
 
         self.__ctx_store = ContextStore()
 
@@ -66,6 +70,10 @@ class StateStore:
             self.__bound_variables_store.var
             + self.__tmp_banned_bound_variables_store.var
         )
+
+    @property
+    def target_structs(self) -> list[str]:
+        return list(set(self.__target_structs_store.var))
 
     def exists_bound_variables(self) -> bool:
         return len(self.ok_bound_variables) >= 1
@@ -125,6 +133,9 @@ class StateStore:
         self.__bound_variables_store.pop()
         self.exit(cls_name)
 
+    def enter_constraint_definition(self):
+        self.__target_structs_store.reset()
+
     def exit_constraint_definition(self):
         self.__bound_variables_store.reset()
 
@@ -136,6 +147,15 @@ class StateStore:
     def restore_bound_variable(self, concealed_value: str):
         self.__tmp_banned_bound_variables_store.remove(concealed_value)
         self.__bound_variables_store.add(concealed_value)
+
+    def register_target_structs(self, target: str | list[str]):
+        if isinstance(target, list):
+            self.__target_structs_store.add_all(target)
+        else:
+            self.__target_structs_store.add(target)
+
+    def remove_bound_variable(self, bound_variable: str):
+        self.__bound_variables_store.remove(bound_variable)
 
     # --------------------for debug------------------------
     def exit_struct_definitions(self):
