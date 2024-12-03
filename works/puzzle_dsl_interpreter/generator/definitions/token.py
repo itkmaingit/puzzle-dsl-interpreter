@@ -20,6 +20,10 @@ class Token(BaseModel):
         ok: list[str] | None = None,
         ng: list[str] | None = None,
     ) -> Token:
+        if ng != None:
+            pass
+        i = 0
+        LIMIT = 1000
         error_flag = False
         pattern = self.__get_pattern(type)
         if ok is not None and len(ok) == 0:
@@ -32,8 +36,13 @@ class Token(BaseModel):
         elif ng:
             in_ng = True
             while in_ng:
+                if i > LIMIT:
+                    print(i)
+                    print(" 適切な変数を選べませんでした。")
+                    raise RecursionError
                 text = exrex.getone(pattern)
                 in_ng = text in ng
+                i += 1
         else:
             text = exrex.getone(pattern)
         if not re.match(pattern, text):
@@ -57,6 +66,9 @@ class Token(BaseModel):
         if pattern is None:
             raise ValueError(f"No pattern found for token type: {type}")
         return pattern
+
+    def to_json(self):
+        return self.text
 
 
 class TokenType(IntEnum):

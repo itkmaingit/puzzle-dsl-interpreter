@@ -8,10 +8,11 @@ from generator.utils.logger import logger
 
 
 class VariableStore:
-    def __init__(self, is_deletable: bool) -> NoReturn:
+    def __init__(self, is_deletable: bool, is_duplicatable: bool = False) -> NoReturn:  # noqa: FBT002
         self.var: list[str] = []
         self.__var_save: list[str] = []
         self.__is_deletable = is_deletable
+        self.__is_duplicatable = is_duplicatable
 
     def __check_deletable(self):
         if not self.__is_deletable:
@@ -23,10 +24,9 @@ class VariableStore:
         self.__var_save = []
 
     def add(self, text: str):
-        if text not in self.var:
-            self.var.append(text)
-        else:
+        if (text in self.var) and (not self.__is_duplicatable):
             raise DuplicationVariableError(f"重複があるようです。{text}")
+        self.var.append(text)
 
     def add_all(self, lst: list[str]):
         self.var += lst
@@ -54,7 +54,5 @@ class VariableStore:
         self.var = []
 
     def load(self):
-        if len(self.var) > 0:
-            print("load", self.var)
         self.var = deepcopy(self.__var_save)
         self.__var_save = []
