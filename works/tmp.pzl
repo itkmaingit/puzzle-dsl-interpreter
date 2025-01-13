@@ -1,0 +1,11 @@
+structs:
+
+domain-hidden:
+	P <-> { null, 45 } -> { n, undecided };
+	C <-> { null, m } -> { null, undecided };
+	Ep <-> { null, null } -> { 8, undecided, n };
+	Ec <-> { null, m, 1 } -> { undecided, undecided, m };
+
+constraints:
+	B(P) <- B(Ep);
+	Exists(in) <- { zk <- B(P) | B(Ec) <- { l6 <- B(C) | m != |[B(Ep)]| } }, (cycle(in) * 13 < solution(in) || All(c) <- connect(in, { D }), (All(dd) <- in, (!(all_different(dd)) => !(cross(dd) != cross(c) && connect(dd, { D, H }) == connect(in, { H, V }))))) => Exists(a) <- B(P), (!(!(is_rectangle(a))));

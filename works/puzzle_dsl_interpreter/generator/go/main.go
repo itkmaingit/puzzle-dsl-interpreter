@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
+	"time"
 )
 
 func _main() {
@@ -10,6 +12,7 @@ func _main() {
 	maxWorkers := 100 // 同時に実行するゴルーチンの最大数
 	var wg sync.WaitGroup
 	taskChan := make(chan int, numTasks)
+	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// ワーカープールを作成
 	for i := 0; i < maxWorkers; i++ {
@@ -17,7 +20,7 @@ func _main() {
 		go func() {
 			defer wg.Done()
 			for range taskChan {
-				cList, _, _, _, _, _ := InitializeElements()
+				cList, _, _, _, _, _ := InitializeElements(randGen)
 				for i, row := range cList {
 					for j, val := range row {
 						fmt.Printf("c[%d][%d] = %+v\n", i, j, val)

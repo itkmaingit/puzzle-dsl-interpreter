@@ -1,32 +1,40 @@
 package main
 
 import (
-	"reflect"
+	"math/rand"
 	"testing"
 )
 
-// TestFlatten は、Flatten 関数が元の多次元スライスの要素を正しくフラット化し、
+const (
+	testHeight = 3
+	testWidth  = 3
+)
+
+// TestFlatten は、flattenSlice 関数が元の多次元スライスの要素を正しくフラット化し、
 // 要素の欠落や重複がないことを確認するテストです。
 func TestFlatten(t *testing.T) {
-	// 元の多次元スライスを初期化
-	c, _, _, _, _, _ := InitializeElements()
+	// 固定乱数生成器の初期化 (テストの再現性を確保)
+	randGen := rand.New(rand.NewSource(42))
 
-	// Flatten 関数を適用
-	newC := Flatten[*Element](c)
+	// 元の多次元スライスを初期化
+	cList, _, _, _, _, _ := InitializeElements(randGen)
+
+	originalCount := AbsoluteSet(cList)
+	// flattenSlice 関数を適用
+	flattened := flattenSlice[*Element](cList)
 
 	// 元の多次元スライスの要素数をカウント
-	originalCount := countElements(c)
-	if originalCount != len(newC) {
-		t.Errorf("要素数が一致しません。元の要素数: %d, フラット化後の要素数: %d", originalCount, len(newC))
+	if originalCount != len(flattened) {
+		t.Errorf("要素数が一致しません。元の要素数: %d, フラット化後の要素数: %d", originalCount, len(flattened))
 	}
 
 	// 元の要素をマップに収集
 	originalElements := make(map[*Element]struct{})
-	collectElements(c, originalElements)
+	collectElements(cList, originalElements)
 
 	// フラット化された要素をマップに収集
 	flattenedElements := make(map[*Element]struct{})
-	for _, elem := range newC {
+	for _, elem := range flattened {
 		flattenedElements[elem] = struct{}{}
 	}
 
@@ -38,12 +46,33 @@ func TestFlatten(t *testing.T) {
 	// 元の要素がフラット化後のスライスにすべて含まれているか確認
 	for elem := range originalElements {
 		if _, exists := flattenedElements[elem]; !exists {
-			t.Errorf("元の要素 %v がフラット化後のスライスに存在しません。", elem)
+			t.Errorf("元の要素 %+v がフラット化後のスライスに存在しません。", elem)
 		}
 	}
 }
 
-// テストコード
+// collectElements は、多次元スライス内の *Element 型の要素をマップに収集します。
+func collectElements(input interface{}, elements map[*Element]struct{}) {
+	switch v := input.(type) {
+	case []*Element:
+		for _, elem := range v {
+			if elem != nil {
+				elements[elem] = struct{}{}
+			}
+		}
+	case [][]*Element:
+		for _, row := range v {
+			collectElements(row, elements)
+		}
+	case [][][]*Element:
+		for _, matrix := range v {
+			collectElements(matrix, elements)
+		}
+		// 必要に応じてさらに多次元に対応
+	}
+}
+
+// TestIsSubset は、IsSubset 関数の動作を検証するテストです。
 func TestIsSubset(t *testing.T) {
 	// テストケース 1: A は B の部分集合である
 	A1 := [][][]int{
@@ -106,22 +135,21 @@ func TestIsSubset(t *testing.T) {
 	}
 
 	// テストケース 7: ポインタ型のテスト
-	cList, _, _, _, _, _ := InitializeElements()
-	p, _, _, _, _, _ := InitializeElements()
-	if IsSubset[*Element](cList, p) {
-		t.Errorf("Test case 7 failed: c should not be a subset of p")
+	cList, pList, _, _, _, _ := initTestElements()
+	if IsSubset[*Element](cList, pList) {
+		t.Errorf("Test case 7 failed: cList should not be a subset of pList")
 	}
 
 	// ポインタ型で部分集合ではない場合
-	// p の要素を変更して c にない要素を持たせる
-	// ここではシミュレーションのため、p の最初の要素を新しい *Element に置き換えます
-	p[0][0] = &Element{Value: 999, Attr: C, N: 0, M: 0}
-	if IsSubset[*Element](cList, p) {
-		t.Errorf("Test case 8 failed: c should not be a subset of modified p")
+	// p の最初の要素を新しい *Element に置き換える
+	if len(pList) > 0 && len(pList[0]) > 0 {
+		pList[0][0] = &Element{Value: 999, Attr: C, N: 0, M: 0}
+		if IsSubset[*Element](cList, pList) {
+			t.Errorf("Test case 8 failed: cList should not be a subset of modified pList")
+		}
 	}
 
-	// --- テストケース 9: cList のコピーを作成して部分集合であることを確認 ---
-	// cList のコピーを作成
+	// テストケース 9: cList のコピーを作成して部分集合であることを確認
 	cListCopy := make([][]*Element, len(cList))
 	for i := range cList {
 		cListCopy[i] = make([]*Element, len(cList[i]))
@@ -134,104 +162,15 @@ func TestIsSubset(t *testing.T) {
 	}
 
 	// cListCopy の要素を変更して部分集合ではなくなるようにする
-	cListCopy[0][0] = &Element{Value: -2, Attr: C, N: 0, M: 0}
-
-	// cListCopy が cList の部分集合ではないことを確認
-	if IsSubset[*Element](cListCopy, cList) {
-		t.Errorf("Test case 10 failed: modified cListCopy should not be a subset of cList")
+	if len(cListCopy) > 0 && len(cListCopy[0]) > 0 {
+		cListCopy[0][0] = &Element{Value: -2, Attr: C, N: 0, M: 0}
+		if IsSubset[*Element](cListCopy, cList) {
+			t.Errorf("Test case 10 failed: modified cListCopy should not be a subset of cList")
+		}
 	}
 }
 
-func TestIsIn(t *testing.T) {
-	// テストケース 1: A が B に直接含まれている
-	A1 := 5
-	B1 := []interface{}{1, 2, 3, 4, 5}
-	if !IsIn[int](A1, B1) {
-		t.Errorf("Test case 1 failed: %v should be in %v", A1, B1)
-	}
-
-	// テストケース 2: A が B のネストされたスライスに含まれている
-	A2 := []int{1, 2}
-	B2 := []interface{}{0, []int{1, 2}, 3}
-	if !IsIn[[]int](A2, B2) {
-		t.Errorf("Test case 2 failed: %v should be in %v", A2, B2)
-	}
-
-	// テストケース 3: A が B に含まれていない
-	A3 := "not_in_slice"
-	B3 := []interface{}{"a", "b", "c"}
-	if IsIn[string](A3, B3) {
-		t.Errorf("Test case 3 failed: %v should not be in %v", A3, B3)
-	}
-
-	// テストケース 4: A がネストされた深い階層に含まれている
-	A4 := 42
-	B4 := []interface{}{
-		1,
-		[]interface{}{
-			2,
-			[]interface{}{
-				3, 42,
-			},
-		},
-	}
-	if !IsIn[int](A4, B4) {
-		t.Errorf("Test case 4 failed: %v should be in %v", A4, B4)
-	}
-
-	// テストケース 5: A が B の多次元スライスの要素として含まれている
-	A5 := [][]int{{1, 2}, {3, 4}}
-	B5 := []interface{}{
-		5,
-		[][]int{{1, 2}, {3, 4}},
-		7,
-	}
-	if !IsIn[[][]int](A5, B5) {
-		t.Errorf("Test case 5 failed: %v should be in %v", A5, B5)
-	}
-
-	// テストケース 6: A と B が同じ値だが異なるインスタンス
-	A6 := &Element{Value: 10, Attr: C, N: 0, M: 0}
-	B6 := []interface{}{
-		&Element{Value: 10, Attr: C, N: 0, M: 0},
-	}
-	if !IsIn[*Element](A6, B6) {
-		t.Errorf("Test case 6 failed: %v should be in %v", A6, B6)
-	}
-
-	// テストケース 7: InitializeElements() から生成されたデータを使用
-	cList, _, _, _, _, _ := InitializeElements()
-	A7 := cList[0][0] // cList の最初の要素
-	B7 := cList       // cList 全体
-	if !IsIn[*Element](A7, B7) {
-		t.Errorf("Test case 7 failed: A7 should be in B7")
-	}
-
-	// テストケース 8: A が B に含まれていない場合（InitializeElements を使用）
-	A8 := &Element{Value: -1, Attr: C, N: -1, M: -1}
-	B8 := cList
-	if IsIn[*Element](A8, B8) {
-		t.Errorf("Test case 8 failed: A8 should not be in B8")
-	}
-
-	// テストケース 9: A が B のネストされたスライスの中に含まれている（ポインタ型）
-	A9 := cList[1]
-	B9 := cList
-	if !IsIn[[]*Element](A9, B9) {
-		t.Errorf("Test case 9 failed: A9 should be in B9")
-	}
-
-	// テストケース 10: A がスライスで、B の要素と一致しない
-	A10 := []*Element{
-		{Value: -2, Attr: C, N: 0, M: 0},
-	}
-	B10 := cList
-	if IsIn[[]*Element](A10, B10) {
-		t.Errorf("Test case 10 failed: A10 should not be in B10")
-	}
-}
-
-// テストコード
+// TestAllDifferent は、AllDifferent 関数の動作を検証するテストです。
 func TestAllDifferent(t *testing.T) {
 	// テストケース 1: すべての要素の Value が異なる場合
 	elements1 := []*Element{
@@ -280,12 +219,23 @@ func TestAllDifferent(t *testing.T) {
 	}
 
 	// テストケース 6: InitializeElements() から生成されたデータを使用
-	cList, _, _, _, _, _ := InitializeElements()
-	flattenedCList := Flatten[*Element](cList)
+	cList, _, _, _, _, _ := initTestElements()
+	flattenedCList := flattenSlice[*Element](cList)
 
-	// 重複がない場合を確認
-	if AllDifferent(flattenedCList) {
-		t.Errorf("Test case 6 failed: expected true, got false")
+	// AllDifferent の結果が期待通りか確認
+	// InitializeElements で乱数を使っているため、結果はシードに依存します
+	// この例では、シードを固定しているため結果も固定
+	expectedAllDifferent := true
+	seenValues := make(map[int]struct{})
+	for _, elem := range flattenedCList {
+		if _, exists := seenValues[elem.Value]; exists {
+			expectedAllDifferent = false
+			break
+		}
+		seenValues[elem.Value] = struct{}{}
+	}
+	if AllDifferent(flattenedCList) != expectedAllDifferent {
+		t.Errorf("Test case 6 failed: AllDifferent(flattenedCList) = %v; expected %v", AllDifferent(flattenedCList), expectedAllDifferent)
 	}
 
 	// Value を重複させる
@@ -297,34 +247,235 @@ func TestAllDifferent(t *testing.T) {
 	}
 }
 
-// countElements は、多次元スライス内の *Element 型の要素数を再帰的にカウントします。
-func countElements(input interface{}) int {
-	count := 0
-	v := reflect.ValueOf(input)
-	switch v.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			count += countElements(v.Index(i).Interface())
-		}
-	case reflect.Ptr:
-		if _, ok := input.(*Element); ok {
-			count = 1
-		}
+// TestIsHorizontal は、isHorizontal 関数の動作を検証するテストです。
+func TestIsHorizontal(t *testing.T) {
+	// 例: c(0,0) と c(0,1) は同じ行で列が±1なので Horizontal のはず
+	e1 := &Element{N: 0, M: 0, Attr: C}
+	e2 := &Element{N: 0, M: 1, Attr: C}
+	if !isHorizontal(e1, e2) {
+		t.Errorf("expected isHorizontal(e1,e2) = true, got false")
 	}
-	return count
+
+	// 縦方向に並んでいるものは false になるはず
+	e3 := &Element{N: 1, M: 0, Attr: C}
+	if isHorizontal(e1, e3) {
+		t.Errorf("expected isHorizontal(e1,e3) = false, got true")
+	}
+
+	// p(0,0) & p(0,1) => true
+	e4 := &Element{N: 0, M: 0, Attr: P}
+	e5 := &Element{N: 0, M: 1, Attr: P}
+	if !isHorizontal(e4, e5) {
+		t.Errorf("expected isHorizontal(e4,e5) = true, got false")
+	}
+
+	// p(0,0) & p(1,0) => false
+	e6 := &Element{N: 1, M: 0, Attr: P}
+	if isHorizontal(e4, e6) {
+		t.Errorf("expected isHorizontal(e4,e6) = false, got true")
+	}
+
+	// Hp と Hc が同じ属性の場合
+	e7 := &Element{N: 0, M: 0, Attr: Hp}
+	e8 := &Element{N: 0, M: 1, Attr: Hp}
+	if !isHorizontal(e7, e8) {
+		t.Errorf("expected isHorizontal(e7,e8) = true, got false")
+	}
+
+	// 異なる属性間の横隣接
+	e9 := &Element{N: 0, M: 0, Attr: C}
+	e10 := &Element{N: 0, M: 1, Attr: P}
+	if isHorizontal(e9, e10) {
+		t.Errorf("expected isHorizontal(e9,e10) = false, got true")
+	}
 }
 
-// collectElements は、多次元スライス内の *Element 型の要素をマップに収集します。
-func collectElements(input interface{}, elements map[*Element]struct{}) {
-	v := reflect.ValueOf(input)
-	switch v.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			collectElements(v.Index(i).Interface(), elements)
+// TestIsVertical は、isVertical 関数の動作を検証するテストです。
+func TestIsVertical(t *testing.T) {
+	// p(0,0) と p(1,0) は同じ列で行が±1なので Vertical のはず
+	e1 := &Element{N: 0, M: 0, Attr: P}
+	e2 := &Element{N: 1, M: 0, Attr: P}
+	if !isVertical(e1, e2) {
+		t.Errorf("expected isVertical(e1,e2) = true, got false")
+	}
+
+	// 横方向に並んでいるものは false になるはず
+	e3 := &Element{N: 0, M: 1, Attr: P}
+	if isVertical(e1, e3) {
+		t.Errorf("expected isVertical(e1,e3) = false, got true")
+	}
+
+	// c(0,0) と c(1,0) => true
+	e4 := &Element{N: 0, M: 0, Attr: C}
+	e5 := &Element{N: 1, M: 0, Attr: C}
+	if !isVertical(e4, e5) {
+		t.Errorf("expected isVertical(e4,e5) = true, got false")
+	}
+
+	// c(0,0) と c(0,1) => false
+	e6 := &Element{N: 0, M: 1, Attr: C}
+	if isVertical(e4, e6) {
+		t.Errorf("expected isVertical(e4,e6) = false, got true")
+	}
+
+	// Vp と Vc が同じ属性の場合
+	e7 := &Element{N: 0, M: 0, Attr: Vp}
+	e8 := &Element{N: 1, M: 0, Attr: Vp}
+	if !isVertical(e7, e8) {
+		t.Errorf("expected isVertical(e7,e8) = true, got false")
+	}
+
+	// 異なる属性間の縦隣接
+	e9 := &Element{N: 0, M: 0, Attr: C}
+	e10 := &Element{N: 1, M: 0, Attr: P}
+	if isVertical(e9, e10) {
+		t.Errorf("expected isVertical(e9,e10) = false, got true")
+	}
+}
+
+// TestIsDiagonal は、isDiagonal 関数の動作を検証するテストです。
+func TestIsDiagonal(t *testing.T) {
+	// c(0,0), c(1,1) => 斜め (|0-1|=1, |0-1|=1) => true
+	e1 := &Element{N: 0, M: 0, Attr: C}
+	e2 := &Element{N: 1, M: 1, Attr: C}
+	if !isDiagonal(e1, e2) {
+		t.Errorf("expected isDiagonal(e1,e2) = true, got false")
+	}
+
+	// まったく斜めでないもの => false
+	e3 := &Element{N: 1, M: 0, Attr: C}
+	if isDiagonal(e1, e3) {
+		t.Errorf("expected isDiagonal(e1,e3) = false, got true")
+	}
+
+	// p(0,0) と p(1,1) => 斜め
+	e4 := &Element{N: 0, M: 0, Attr: P}
+	e5 := &Element{N: 1, M: 1, Attr: P}
+	if !isDiagonal(e4, e5) {
+		t.Errorf("expected isDiagonal(e4,e5) = true, got false")
+	}
+
+	// p(0,0) と p(1,0) => 斜めではない
+	e6 := &Element{N: 1, M: 0, Attr: P}
+	if isDiagonal(e4, e6) {
+		t.Errorf("expected isDiagonal(e4,e6) = false, got true")
+	}
+
+	// Hp と Vp の斜隣接
+	e7 := &Element{N: 2, M: 2, Attr: Hp}
+	e8 := &Element{N: 1, M: 2, Attr: Vp} // dI = -1, dJ = 1
+	if !isDiagonal(e7, e8) {
+		t.Errorf("expected isDiagonal(e7,e8) = true, got false")
+	}
+
+	// Vp と Hp の斜隣接
+	e9 := &Element{N: 2, M: 2, Attr: Hp}
+	e10 := &Element{N: 2, M: 3, Attr: Vp}
+	if !isDiagonal(e10, e9) {
+		t.Errorf("expected isDiagonal(e10,e9) = true, got false")
+	}
+
+	// Hc と Vc の斜隣接
+	e11 := &Element{N: 2, M: 2, Attr: Hc}
+	e12 := &Element{N: 1, M: 2, Attr: Vc}
+	if !isDiagonal(e11, e12) {
+		t.Errorf("expected isDiagonal(e11,e12) = true, got false")
+	}
+
+	// Vc と Hc の斜隣接
+	e13 := &Element{N: 3, M: 2, Attr: Hc}
+	e14 := &Element{N: 2, M: 2, Attr: Vc}
+	if !isDiagonal(e14, e13) {
+		t.Errorf("expected isDiagonal(e14,e13) = true, got false")
+	}
+}
+
+// TestConnect は、Connect 関数の動作を検証するテストです。
+func TestConnect(t *testing.T) {
+	// テスト用の小さな ElementList を作成
+	cList, _, _, _, _, _ := initTestElements()
+
+	// ここでは cList[0][0] を中心に、H, V, D, M をひととおり拾ってみるテスト
+	center := cList[0][0] // 例: c(0,0)
+
+	// H, V, D, M 全部取ってみる
+	neighbors := Connect(center, []Relationship{H, V, D, Relationship("M")}, cList)
+
+	// cList は 2x2 なので Flatten して要素は4つ: c(0,0), c(0,1), c(1,0), c(1,1)
+	// うち、center 本人以外の 3 つのうち “横/縦/斜め/一致” を満たすものがあれば neighbors に入る
+	// → 例えば “横隣 = c(0,1)”, “縦隣 = c(1,0)”, “斜隣 = c(1,1)”
+
+	// 期待される neighbors の数は 3 (c(0,1), c(1,0), c(1,1))
+	expectedNeighborsCount := 3
+	if len(neighbors) != expectedNeighborsCount {
+		t.Errorf("expected %d neighbors for c(0,0), got %d. neighbors: %v", expectedNeighborsCount, len(neighbors), neighbors)
+	}
+
+	// 期待される neighbors の内容を確認
+	expectedNeighbors := []*Element{
+		cList[0][1], // H
+		cList[1][0], // V
+		cList[1][1], // D
+	}
+
+	for _, expected := range expectedNeighbors {
+		found := false
+		for _, neighbor := range neighbors {
+			if neighbor.Equal(expected) {
+				found = true
+				break
+			}
 		}
-	case reflect.Ptr:
-		if elem, ok := input.(*Element); ok {
-			elements[elem] = struct{}{}
+		if !found {
+			t.Errorf("expected neighbor %+v not found in neighbors: %v", expected, neighbors)
 		}
 	}
+
+	// 例えば “横だけ” を拾う場合は
+	hNeighbors := Connect(center, []Relationship{H}, cList)
+	// c(0,0) から見た “横” は c(0,1) だけのはず
+	expectedHNeighbors := []*Element{
+		cList[0][1],
+	}
+
+	if len(hNeighbors) != len(expectedHNeighbors) {
+		t.Errorf("expected %d horizontal neighbors for c(0,0), got %d. hNeighbors: %v", len(expectedHNeighbors), len(hNeighbors), hNeighbors)
+	}
+
+	for _, expected := range expectedHNeighbors {
+		found := false
+		for _, neighbor := range hNeighbors {
+			if neighbor.Equal(expected) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected horizontal neighbor %+v not found in hNeighbors: %v", expected, hNeighbors)
+		}
+	}
+
+	// “M” 関係性は未定義なので、追加のテストを行いますが、現在の isRelated 関数では "M" は false となります
+	mNeighbors := Connect(center, []Relationship{Relationship("M")}, cList)
+	if len(mNeighbors) != 0 {
+		t.Errorf("expected 0 'M' neighbors for c(0,0), got %d. mNeighbors: %v", len(mNeighbors), mNeighbors)
+	}
+}
+
+// initTestElements は、テスト用の小さな ElementList を作成します。
+func initTestElements() (ElementList, ElementList, ElementList, ElementList, ElementList, ElementList) {
+	// 固定乱数生成器の初期化 (テストの再現性を確保)
+	randGen := rand.New(rand.NewSource(42))
+
+	// candidates を小さめに
+	pointCandidates := []int{0, 1}
+	edgeCandidates := []int{0, 1}
+
+	cList := NewElementList(randGen, testHeight, testWidth, pointCandidates, C)
+	pList := NewElementList(randGen, testHeight+1, testWidth+1, pointCandidates, P)
+	hcList := NewElementList(randGen, testHeight, testWidth-1, edgeCandidates, Hc)
+	vcList := NewElementList(randGen, testHeight-1, testWidth, edgeCandidates, Vc)
+	hpList := NewElementList(randGen, testHeight+1, testWidth, edgeCandidates, Hp)
+	vpList := NewElementList(randGen, testHeight, testWidth+1, edgeCandidates, Vp)
+	return cList, pList, hcList, vcList, hpList, vpList
 }

@@ -1,0 +1,406 @@
+{
+    "structs": [],
+    "domain": [
+        {
+            "name": "P",
+            "domain": [
+                "null",
+                "45"
+            ],
+            "hidden": [
+                "n",
+                "undecided"
+            ]
+        },
+        {
+            "name": "C",
+            "domain": [
+                "null",
+                "m"
+            ],
+            "hidden": [
+                "null",
+                "undecided"
+            ]
+        },
+        {
+            "name": "Ep",
+            "domain": [
+                "null",
+                "null"
+            ],
+            "hidden": [
+                "8",
+                "undecided",
+                "n"
+            ]
+        },
+        {
+            "name": "Ec",
+            "domain": [
+                "null",
+                "m",
+                "1"
+            ],
+            "hidden": [
+                "undecided",
+                "undecided",
+                "m"
+            ]
+        }
+    ],
+    "constraints": [
+        {
+            "targets": [
+                "P",
+                "Ep"
+            ],
+            "constraint": {
+                "type": "boolean",
+                "name": "set_comparison",
+                "properties": {
+                    "op": "<-"
+                },
+                "args": {
+                    "left": {
+                        "type": "set",
+                        "name": "B",
+                        "args": {
+                            "struct": "P"
+                        }
+                    },
+                    "right": {
+                        "type": "set",
+                        "name": "B",
+                        "args": {
+                            "struct": "Ep"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "targets": [
+                "Ec",
+                "P",
+                "C",
+                "Ep"
+            ],
+            "constraint": {
+                "type": "boolean",
+                "name": "compound",
+                "properties": {
+                    "op": "=>"
+                },
+                "args": {
+                    "right": {
+                        "type": "boolean",
+                        "name": "quantifier",
+                        "properties": {
+                            "quantifier": "Exists",
+                            "variable": "a",
+                            "universal_set": {
+                                "type": "set",
+                                "name": "B",
+                                "args": {
+                                    "struct": "P"
+                                }
+                            }
+                        },
+                        "args": {
+                            "type": "boolean",
+                            "name": "not",
+                            "args": {
+                                "type": "boolean",
+                                "name": "not",
+                                "args": {
+                                    "type": "boolean",
+                                    "name": "is_rectangle",
+                                    "args": {
+                                        "variable": "a"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "left": {
+                        "type": "boolean",
+                        "name": "quantifier",
+                        "properties": {
+                            "quantifier": "Exists",
+                            "variable": "in",
+                            "universal_set": {
+                                "type": "set",
+                                "name": "generation_set",
+                                "properties": {
+                                    "variable": "zk",
+                                    "universal_set": {
+                                        "type": "set",
+                                        "name": "B",
+                                        "args": {
+                                            "struct": "P"
+                                        }
+                                    },
+                                    "filter": {
+                                        "type": "boolean",
+                                        "name": "set_comparison",
+                                        "properties": {
+                                            "op": "<-"
+                                        },
+                                        "args": {
+                                            "left": {
+                                                "type": "set",
+                                                "name": "B",
+                                                "args": {
+                                                    "struct": "Ec"
+                                                }
+                                            },
+                                            "right": {
+                                                "type": "set",
+                                                "name": "generation_set",
+                                                "properties": {
+                                                    "variable": "l6",
+                                                    "universal_set": {
+                                                        "type": "set",
+                                                        "name": "B",
+                                                        "args": {
+                                                            "struct": "C"
+                                                        }
+                                                    },
+                                                    "filter": {
+                                                        "type": "boolean",
+                                                        "name": "int_value_comparison",
+                                                        "properties": {
+                                                            "op": "!="
+                                                        },
+                                                        "args": {
+                                                            "left": {
+                                                                "type": "value",
+                                                                "name": "int",
+                                                                "args": {
+                                                                    "value": "m"
+                                                                }
+                                                            },
+                                                            "right": {
+                                                                "type": "value",
+                                                                "name": "int",
+                                                                "args": {
+                                                                    "value": {
+                                                                        "name": "absolute_set",
+                                                                        "args": {
+                                                                            "type": "set",
+                                                                            "name": "B",
+                                                                            "args": {
+                                                                                "struct": "Ep"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "args": {
+                            "type": "boolean",
+                            "name": "compound",
+                            "properties": {
+                                "op": "||"
+                            },
+                            "args": {
+                                "right": {
+                                    "type": "boolean",
+                                    "name": "quantifier",
+                                    "properties": {
+                                        "quantifier": "All",
+                                        "variable": "c",
+                                        "universal_set": {
+                                            "type": "set",
+                                            "name": "connect",
+                                            "args": {
+                                                "variable": "in",
+                                                "relationship": [
+                                                    "D"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "args": {
+                                        "type": "boolean",
+                                        "name": "quantifier",
+                                        "properties": {
+                                            "quantifier": "All",
+                                            "variable": "dd",
+                                            "universal_set": "in"
+                                        },
+                                        "args": {
+                                            "type": "boolean",
+                                            "name": "compound",
+                                            "properties": {
+                                                "op": "=>"
+                                            },
+                                            "args": {
+                                                "right": {
+                                                    "type": "boolean",
+                                                    "name": "not",
+                                                    "args": {
+                                                        "type": "boolean",
+                                                        "name": "compound",
+                                                        "properties": {
+                                                            "op": "&&"
+                                                        },
+                                                        "args": {
+                                                            "right": {
+                                                                "type": "boolean",
+                                                                "name": "set_equation",
+                                                                "properties": {
+                                                                    "op": "=="
+                                                                },
+                                                                "args": {
+                                                                    "left": {
+                                                                        "type": "set",
+                                                                        "name": "connect",
+                                                                        "args": {
+                                                                            "variable": "dd",
+                                                                            "relationship": [
+                                                                                "D",
+                                                                                "H"
+                                                                            ]
+                                                                        }
+                                                                    },
+                                                                    "right": {
+                                                                        "type": "set",
+                                                                        "name": "connect",
+                                                                        "args": {
+                                                                            "variable": "in",
+                                                                            "relationship": [
+                                                                                "H",
+                                                                                "V"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "left": {
+                                                                "type": "boolean",
+                                                                "name": "int_value_comparison",
+                                                                "properties": {
+                                                                    "op": "!="
+                                                                },
+                                                                "args": {
+                                                                    "left": {
+                                                                        "type": "value",
+                                                                        "name": "int",
+                                                                        "args": {
+                                                                            "value": {
+                                                                                "type": "boolean",
+                                                                                "name": "cross",
+                                                                                "args": {
+                                                                                    "variable": "dd"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    "right": {
+                                                                        "type": "value",
+                                                                        "name": "int",
+                                                                        "args": {
+                                                                            "value": {
+                                                                                "type": "boolean",
+                                                                                "name": "cross",
+                                                                                "args": {
+                                                                                    "variable": "c"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "left": {
+                                                    "type": "boolean",
+                                                    "name": "not",
+                                                    "args": {
+                                                        "type": "boolean",
+                                                        "name": "all_different",
+                                                        "args": {
+                                                            "variable": "dd"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "left": {
+                                    "type": "boolean",
+                                    "name": "int_value_comparison",
+                                    "properties": {
+                                        "op": "<"
+                                    },
+                                    "args": {
+                                        "left": {
+                                            "type": "value",
+                                            "name": "int",
+                                            "args": {
+                                                "value": {
+                                                    "type": "value",
+                                                    "name": "int_operation",
+                                                    "properties": {
+                                                        "op": "*"
+                                                    },
+                                                    "args": {
+                                                        "left": {
+                                                            "type": "value",
+                                                            "name": "int",
+                                                            "args": {
+                                                                "value": {
+                                                                    "type": "boolean",
+                                                                    "name": "cycle",
+                                                                    "args": {
+                                                                        "variable": "in"
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "right": {
+                                                            "type": "value",
+                                                            "name": "int",
+                                                            "args": {
+                                                                "value": "13"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "right": {
+                                            "type": "value",
+                                            "name": "int",
+                                            "args": {
+                                                "value": {
+                                                    "type": "value",
+                                                    "name": "solution",
+                                                    "args": {
+                                                        "variable": "in"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
