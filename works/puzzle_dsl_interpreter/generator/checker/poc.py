@@ -12,6 +12,24 @@ from generator.checker.function import *
 def solve(board: Board, targets: set[str]):
     board.shuffle(targets)
 
+    def v3(zk: Element):
+        def v8(l6: Element):
+            v12 = board.b(Attribute.Ep)
+            v11 = absolute_set(v12)
+            v10 = int(WIDTH)  # mはWIDTHに変換
+            v9 = int_value_comparison("!=", v10, v11)
+            return v9
+
+        v7 = board.b(Attribute.C)
+        v6 = generation_set(v7, v8)
+        v5 = board.b(Attribute.Ec)
+        v4 = is_in(v5, v6)  # <-はis_in
+        return v4
+
+    v2 = board.b(Attribute.P)
+    v1 = generation_set(v2, v3)
+    return v1
+
 
 def main():
     success = 0
