@@ -275,7 +275,7 @@ def handle_set_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
                 child_var = variable_arg
 
             lines.append(
-                f"{indent_str}{var_name} = connect({child_var}, {converted_rels.__str__().replace("'", '')})",
+                f"{indent_str}{var_name} = connect({child_var}, {converted_rels.__str__().replace("'", '')}, board)",
             )
         case SetType.GENERATION_SET:
             variable_name = props["variable"]  # 例 "zk"
