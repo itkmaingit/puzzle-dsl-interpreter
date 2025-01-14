@@ -14,6 +14,7 @@ from generator.checker.render import (
 
 # グローバルで変数名を生成するカウンタ
 var_counter = 0
+func_counter = 0
 INDENT = "    "
 
 
@@ -61,6 +62,16 @@ def gen_var_name() -> str:
     return name
 
 
+def gen_func_name() -> str:
+    """
+    連番で constraint0, constraint2, constraint3, ... のような変数名を生成する。
+    """
+    global func_counter
+    name = f"constraint{func_counter}"
+    func_counter += 1
+    return name
+
+
 def parse_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
     """
     JSONノードを解析し、(コード行のリスト, 結果を保持する変数名) を返す。
@@ -76,7 +87,7 @@ def parse_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
         case NodeType.VALUE:
             return handle_value_node(node, indent_level)
         case _:
-            raise PanicError("Unsupported types.")
+            raise PanicError(f"Unsupported types. {ntype}")
 
 
 def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
@@ -100,8 +111,11 @@ def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], s
             universal_set = props["universal_set"]  # セットノード
 
             # 1) universal set を parse
-            set_lines, set_var = parse_node(universal_set, indent_level)
-            lines.extend(set_lines)
+            if isinstance(universal_set, str):
+                set_var = universal_set
+            else:
+                set_lines, set_var = parse_node(universal_set, indent_level)
+                lines.extend(set_lines)
 
             # 2) 条件式の部分(quantifierノードの "args")を関数として定義する
             func_name = gen_var_name()
@@ -148,7 +162,7 @@ def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], s
             child_node = node["args"]
             child_lines, child_var = parse_node(child_node, indent_level)
             lines.extend(child_lines)
-            lines.append(f"{indent_str}{var_name} = _not({child_var})")
+            lines.append(f"{indent_str}{var_name} = not_bool({child_var})")
 
         case BooleanType.ALL_DIFFERENT:
             # all_different(variable)
@@ -239,6 +253,7 @@ def handle_set_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
             # connect( variable, {Relationship.X, Relationship.Y, ...} )
             rels = set(args.get("relationship", []))
             child_var: str
+            converted_rels = {f"Relationship.{r.replace("'", '')}" for r in rels}
 
             # variable が文字列ならそのまま、dict なら parse_node する
             variable_arg = args.get("variable")
@@ -251,7 +266,7 @@ def handle_set_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
                 child_var = variable_arg
 
             lines.append(
-                f"{indent_str}{var_name} = connect({child_var}, {rels.__str__()})",
+                f"{indent_str}{var_name} = connect({child_var}, {converted_rels.__str__().replace("'", '')})",
             )
         case SetType.GENERATION_SET:
             variable_name = props["variable"]  # 例 "zk"
@@ -327,11 +342,11 @@ def handle_value_node(node: dict, indent_level: int = 1) -> tuple[list[str], str
             lines.extend(right_lines)
 
             lines.append(
-                f"{indent_str}{var_name} = int_operation({op_}, {left_var}, {right_var})",
+                f"{indent_str}{var_name} = int_operation('{op_}', {left_var}, {right_var})",
             )
 
         case ValueType.CYCLE:
-            # 例: cycle(variable="in")
+            # 例: cycle(variable="mr")
             variable = args.get("variable")
             # ここでは「cycle(...) → intを返す関数」と想定
             lines.append(f"{indent_str}{var_name} = cycle({variable})")
@@ -347,8 +362,12 @@ def handle_value_node(node: dict, indent_level: int = 1) -> tuple[list[str], str
             # absolute_set(sub_var) を生成
             lines.append(f"{indent_str}{var_name} = int(absolute_set({sub_var}))")
 
+        case ValueType.SOLUTION:
+            variable = args.get("variable")
+            lines.append(f"{indent_str}{var_name} = solution({variable})")
+
         case _:
-            raise PanicError("Unsupported value type.")
+            raise PanicError(f"Unsupported value type. {vname}")
 
     return lines, var_name
 
@@ -358,34 +377,47 @@ def generate_code(json_data: dict) -> str:
     汎用的に JSON データをパースし、最終的に main() 関数の中で
     トップレベルの式を生成して return する Python コードを返す。
     """
-    constraints = json_data["constraints"]
-    targets_list = []
-    for constraint in constraints:
-        targets_list.extend(constraint["targets"])
-    targets = set(targets_list)
-    # トップレベルのノードを parse
-    top_lines, top_var = parse_node(json_data, 1)
-
-    # コード組み立て
     lines = []
     lines.append("from __future__ import annotations")
 
-    lines.append("import concurrent")
-    lines.append("import tqdm")
+    lines.append("import concurrent.futures")
     lines.append("from generator.checker.constants import *")
     lines.append("from generator.checker.dataclass import *")
     lines.append("from generator.checker.errors import *")
     lines.append("from generator.checker.function import *")
-    lines.append("def solve(board: Board, targets: list[str]):")
-    lines.append(f"{INDENT}board.shuffle(targets)")
-    # 生成された行をインデント付きで入れる
-    for ln in top_lines:
-        lines.append(INDENT + ln)
+    constraints = json_data["constraints"]
+    targets_list = []
+    func_lists = []
+    for constraint in constraints:
+        func_lines = []
+        targets_list.extend(constraint["targets"])
+        top_lines, top_var = parse_node(constraint["constraint"], 0)
+        func_name = gen_func_name()
+        func_lists.append((func_name, len(top_lines)))
+        func_lines.append(f"def {func_name}(board: Board) -> bool:")
+        for ln in top_lines:
+            func_lines.append(INDENT + ln)
+        func_lines.append(f"{INDENT}return {top_var}")
+
+        lines.extend(func_lines)
+    func_lists.sort(key=lambda x: x[1])
+    sorted_func_lists = [x[0] for x in func_lists]
+    targets = set(targets_list)
 
     # 最後にトップレベルの結果を return するなど好きに処理
     # ここでは「return 変数」にしておく
-    lines.append(f"{INDENT}return {top_var}")
     # fmt: off
+
+
+    lines.append("def solve(board: Board, targets: set[str]):")
+    lines.append(f"{INDENT}try:")
+    lines.append(f"{INDENT}{INDENT}board.shuffle(targets)")
+    lines.append(f"{INDENT}{INDENT}for constraint in {sorted_func_lists.__str__().replace("'","")}:")
+    lines.append(f"{INDENT}{INDENT}{INDENT}if not constraint(board):")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}return 0")
+    lines.append(f"{INDENT}{INDENT}return 1")
+    lines.append(f"{INDENT}except Exception:")
+    lines.append(f"{INDENT}{INDENT}raise PanicError")
     lines.append("def main():")
     lines.append(f"{INDENT}success = 0")
     lines.append(f"{INDENT}c_list = ElementList(HEIGHT, WIDTH, Attribute.C)")
@@ -400,13 +432,21 @@ def generate_code(json_data: dict) -> str:
     lines.append(f"{INDENT}{INDENT}futures = [")
     lines.append(f"{INDENT}{INDENT}{INDENT}executor.submit(solve, board, targets) for _ in range(NUMBER_OF_SAMPLES)")
     lines.append(f"{INDENT}{INDENT}]")
-    lines.append(f"{INDENT}{INDENT}with tqdm(total=len(futures)) as pbar:")
+    lines.append(f"{INDENT}{INDENT}try:")
     lines.append(f"{INDENT}{INDENT}{INDENT}for future in concurrent.futures.as_completed(futures):")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}result = future.result()")
-    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}success += 1")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}success += result")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}if CORRECT_RANGE[1] < success:")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}raise PanicError('成功回数が大きすぎました。')")
-    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}pbar.update(1)")
+    lines.append(f"{INDENT}{INDENT}except PanicError:")
+    lines.append(f"{INDENT}{INDENT}{INDENT}for future in futures:")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}if not future.running():")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}future.cancel()")
+    lines.append(f"{INDENT}{INDENT}{INDENT}for process in executor._processes.values():")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}process.cancel()")
+    lines.append(f"{INDENT}{INDENT}{INDENT}executor.shutdown(wait=False, cancel_futures=True)")
+    lines.append(f"{INDENT}{INDENT}{INDENT}sys.exit(1)")
+
     lines.append('if __name__ == "__main__":')
     lines.append(f"{INDENT}main()")
     # fmt: on
@@ -550,7 +590,7 @@ if __name__ == "__main__":
                         "name": "quantifier",
                         "properties": {
                             "quantifier": "Exists",
-                            "variable": "in",
+                            "variable": "mr",
                             "universal_set": {
                                 "type": "set",
                                 "name": "generation_set",
@@ -608,6 +648,7 @@ if __name__ == "__main__":
                                                                 "name": "int",
                                                                 "args": {
                                                                     "value": {
+                                                                        "type": "value",
                                                                         "name": "absolute_set",
                                                                         "args": {
                                                                             "type": "set",
@@ -645,7 +686,7 @@ if __name__ == "__main__":
                                             "type": "set",
                                             "name": "connect",
                                             "args": {
-                                                "variable": "in",
+                                                "variable": "mr",
                                                 "relationship": [
                                                     "D"
                                                 ]
@@ -658,7 +699,7 @@ if __name__ == "__main__":
                                         "properties": {
                                             "quantifier": "All",
                                             "variable": "dd",
-                                            "universal_set": "in"
+                                            "universal_set": "mr"
                                         },
                                         "args": {
                                             "type": "boolean",
@@ -699,7 +740,7 @@ if __name__ == "__main__":
                                                                         "type": "set",
                                                                         "name": "connect",
                                                                         "args": {
-                                                                            "variable": "in",
+                                                                            "variable": "mr",
                                                                             "relationship": [
                                                                                 "H",
                                                                                 "V"
@@ -787,7 +828,7 @@ if __name__ == "__main__":
                                                                     "type": "value",
                                                                     "name": "cycle",
                                                                     "args": {
-                                                                        "variable": "in"
+                                                                        "variable": "mr"
                                                                     }
                                                                 }
                                                             }
@@ -811,7 +852,7 @@ if __name__ == "__main__":
                                                     "type": "value",
                                                     "name": "solution",
                                                     "args": {
-                                                        "variable": "in"
+                                                        "variable": "mr"
                                                     }
                                                 }
                                             }

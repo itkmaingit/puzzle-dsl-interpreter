@@ -19,7 +19,7 @@ def quantifier_boolean(name: str, set_name: str, func_name: str, type: str) -> s
     if type == "All":
         return f"{name} = is_all({set_name}, {func_name})"
     if type == "Exists":
-        return f"{name} = is_exist({set_name}, {func_name})"
+        return f"{name} = is_exists({set_name}, {func_name})"
     raise PanicError
 
 

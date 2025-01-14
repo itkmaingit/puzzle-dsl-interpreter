@@ -652,6 +652,7 @@ class Int(AlternativeRule):
 
         def to_json(self):
             ret = {
+                "type": "value",
                 "name": "absolute_set",
                 "args": self.get(1).to_json(),
             }

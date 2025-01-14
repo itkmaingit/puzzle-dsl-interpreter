@@ -192,6 +192,11 @@ def int_value_comparison(op: str, left: int, right: int) -> bool:
             return left != right
         case "==":
             return left == right
+        case "<":
+            return left < right
+        case ">":
+            return left < right
+
         case _:
             raise PanicError("Unsupported int comparison operator.")
 

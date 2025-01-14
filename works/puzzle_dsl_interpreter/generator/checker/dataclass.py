@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 from enum import StrEnum
+from functools import lru_cache
 
 from generator.checker.errors import InvalidError
 
@@ -64,6 +65,7 @@ class ElementList:
             [Element(attr, i, j) for j in range(width)] for i in range(height)
         ]
 
+    @lru_cache
     def flatten(self) -> set[Element]:
         return {elem for row in self.elements for elem in row}
 
@@ -112,9 +114,11 @@ class Board:
                     elements_map[key] = elem
         return elements_map
 
+    @lru_cache
     def get_element(self, attr: Attribute, i: int, j: int) -> Element | None:
         return self.elements_map.get((attr, i, j))
 
+    @lru_cache
     def b(self, attr: Attribute) -> set[Element]:
         match attr:
             case Attribute.C:
@@ -122,9 +126,9 @@ class Board:
             case Attribute.P:
                 return self.p_list.flatten()
             case Attribute.Ec:
-                return self.hc_list.flatten() + self.vc_list.flatten()
+                return self.hc_list.flatten() | self.vc_list.flatten()
             case Attribute.Ep:
-                return self.hp_list.flatten() + self.vp_list.flatten()
+                return self.hp_list.flatten() | self.vp_list.flatten()
             case Attribute.Hc:
                 return self.hc_list.flatten()
             case Attribute.Vc:
