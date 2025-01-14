@@ -7,3 +7,11 @@ class InvalidError(Exception):
 
 class PanicError(Exception):
     pass
+
+
+class UnknownError(Exception):
+    pass
+
+
+class FailedError(Exception):
+    pass

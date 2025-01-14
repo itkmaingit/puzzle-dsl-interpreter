@@ -82,10 +82,18 @@ def run_tmp_py(code_str: str, pzl_str: str):
 
     # 3. リターンコードが 1 の場合: tmp.py を削除
     if return_code == 1:
-        if stdout == "":
+        if "Unknown" in stdout:
             Path("failed").mkdir(exist_ok=True)
             shutil.copy(tmp_file_path, f"failed/{uuid.uuid4()!s}.py")
+            print("unknown error")
             return
+        if "Panic" in stdout:
+            Path.unlink(tmp_file_path)
+            print("panic error")
+            return
+        if not ("301" in stdout or "10001" in stdout):
+            Path("success").mkdir(exist_ok=True)
+            shutil.copy(tmp_file_path, f"success/{uuid.uuid4()!s}.py")
         print(
             f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}".replace(
                 "\r",

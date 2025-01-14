@@ -42,9 +42,14 @@ class Element:
         self.j = j
 
     def __eq__(self, other):
-        if other is None or isinstance(type(self), type(other)):
+        if other is None or type(self) != type(other):
             return False
-        return self.__dict__ == other.__dict__
+        return (
+            self.value == other.value
+            and self.attr == other.attr
+            and self.i == other.i
+            and self.j == other.j
+        )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -153,6 +158,9 @@ class Board:
                 case Attribute.Ep:
                     self.hp_list.shuffle(edge_candidates)
                     self.vp_list.shuffle(edge_candidates)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 def is_horizontal(e1: Element, e2: Element) -> bool:

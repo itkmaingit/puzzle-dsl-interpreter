@@ -10,15 +10,21 @@ from generator.checker.dataclass import (
     Relationship,
     is_related,
 )
-from generator.checker.errors import InvalidError, PanicError
+from generator.checker.errors import PanicError
 from generator.checker.helper import same_attr
 
 
 def is_subset(A: set[Any], B: set[Any]) -> bool:
+    if not isinstance(A, set):
+        raise PanicError(f"{A} is not set")
+    if not isinstance(B, set):
+        raise PanicError(f"{B} is not set")
     return all(a in B for a in A)
 
 
 def is_in(A: Any, B: set[Any]) -> bool:
+    if not isinstance(B, set):
+        raise PanicError(f"{B} is not set")
     return A in B
 
 
@@ -36,7 +42,7 @@ def connect(e: Element, relationships: set[Relationship], board: Board) -> set[E
     elif e.attr in {Attribute.Hc, Attribute.Vc}:
         elements = board.b(Attribute.Ec)
     else:
-        raise InvalidError("given element's attr is not be allowed.")
+        raise PanicError("given element's attr is not be allowed.")
 
     for other in elements:
         if e != other:
@@ -47,7 +53,7 @@ def connect(e: Element, relationships: set[Relationship], board: Board) -> set[E
 
 def cross(e: Element, board: Board) -> int:
     if e.attr != Attribute.P:
-        raise InvalidError(f"Element at {e} is not P")
+        raise PanicError(f"Element at {e} is not P")
 
     i, j = e.i, e.j
     sum_values = 0
@@ -66,7 +72,7 @@ def cross(e: Element, board: Board) -> int:
 
 def cycle(e: Element, board: Board) -> int:
     if e.attr != Attribute.C:
-        raise InvalidError(f"Element {e} is not C")
+        raise PanicError(f"Element {e} is not C")
 
     i, j = e.i, e.j
     sum_values = 0
@@ -153,16 +159,22 @@ def generation_set(
     filter: Callable[[Element], bool],
 ) -> set[Element]:
     """generation setが来たら、defで関数を作成し、それをgeneration_setに入力値に用いる"""
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     return {e for e in elements if filter(e)}
 
 
 def is_exists(elements: set[Element], filter: Callable[[Element], bool]) -> bool:
     """Check if any element in the set satisfies the filter."""
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     return any(filter(e) for e in elements)
 
 
 def is_all(elements: set[Element], filter: Callable[[Element], bool]) -> bool:
     """Check if all elements in the set satisfy the filter."""
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     return all(filter(e) for e in elements)
 
 
@@ -220,4 +232,6 @@ def int_operation(op: str, left: int, right: int) -> int:
 
 
 def absolute_set(elements: set[Element]) -> int:
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     return len(elements)
