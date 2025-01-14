@@ -72,11 +72,22 @@ def gen_func_name() -> str:
     return name
 
 
-def parse_node(node: dict, indent_level: int = 1) -> tuple[list[str], str]:
+def reset_var():
+    global var_counter
+    global func_counter
+    var_counter = 0
+    func_counter = 0
+
+
+def parse_node(node: dict | str, indent_level: int = 1) -> tuple[list[str], str]:
     """
     JSONノードを解析し、(コード行のリスト, 結果を保持する変数名) を返す。
     node の "type" などを見てサブハンドラを呼び出す。
     """
+    if isinstance(node, str):
+        if node == "None":
+            return [], "{}"
+        return [], node
     ntype = node.get("type")
 
     match ntype:
@@ -111,11 +122,9 @@ def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], s
             universal_set = props["universal_set"]  # セットノード
 
             # 1) universal set を parse
-            if isinstance(universal_set, str):
-                set_var = universal_set
-            else:
-                set_lines, set_var = parse_node(universal_set, indent_level)
-                lines.extend(set_lines)
+
+            set_lines, set_var = parse_node(universal_set, indent_level)
+            lines.extend(set_lines)
 
             # 2) 条件式の部分(quantifierノードの "args")を関数として定義する
             func_name = gen_var_name()
@@ -377,10 +386,12 @@ def generate_code(json_data: dict) -> str:
     汎用的に JSON データをパースし、最終的に main() 関数の中で
     トップレベルの式を生成して return する Python コードを返す。
     """
+    reset_var()
     lines = []
     lines.append("from __future__ import annotations")
 
     lines.append("import concurrent.futures")
+    lines.append("import sys")
     lines.append("from generator.checker.constants import *")
     lines.append("from generator.checker.dataclass import *")
     lines.append("from generator.checker.errors import *")
@@ -420,6 +431,7 @@ def generate_code(json_data: dict) -> str:
     lines.append(f"{INDENT}{INDENT}raise PanicError")
     lines.append("def main():")
     lines.append(f"{INDENT}success = 0")
+    lines.append(f"{INDENT}samples = 0")
     lines.append(f"{INDENT}c_list = ElementList(HEIGHT, WIDTH, Attribute.C)")
     lines.append(f"{INDENT}p_list = ElementList(HEIGHT + 1, WIDTH + 1, Attribute.P)")
     lines.append(f"{INDENT}hc_list = ElementList(HEIGHT, WIDTH - 1, Attribute.Hc)")
@@ -428,16 +440,21 @@ def generate_code(json_data: dict) -> str:
     lines.append(f"{INDENT}vp_list = ElementList(HEIGHT, WIDTH + 1, Attribute.Vp)")
     lines.append(f"{INDENT}board = Board(c_list, p_list, hc_list, vc_list, hp_list, vp_list)")
     lines.append(f"{INDENT}targets = {targets.__str__()}")
-    lines.append(f"{INDENT}with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:")
+    lines.append(f"{INDENT}with concurrent.futures.ProcessPoolExecutor() as executor:")
     lines.append(f"{INDENT}{INDENT}futures = [")
     lines.append(f"{INDENT}{INDENT}{INDENT}executor.submit(solve, board, targets) for _ in range(NUMBER_OF_SAMPLES)")
     lines.append(f"{INDENT}{INDENT}]")
     lines.append(f"{INDENT}{INDENT}try:")
     lines.append(f"{INDENT}{INDENT}{INDENT}for future in concurrent.futures.as_completed(futures):")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}result = future.result()")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}samples+=1")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}success += result")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}if float(samples * 10 / NUMBER_OF_SAMPLES) > 1 and success < 1:")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}print(f'試行回数: {{samples}}, 成功回数: {{success}}')")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}raise PanicError('成功回数が少なすぎました。')")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}if CORRECT_RANGE[1] < success:")
-    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}raise PanicError('成功回数が大きすぎました。')")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}print(f'試行回数: {{samples}}, 成功回数: {{success}}')")
+    lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}{INDENT}raise PanicError('成功回数が多すぎました。')")
     lines.append(f"{INDENT}{INDENT}except PanicError:")
     lines.append(f"{INDENT}{INDENT}{INDENT}for future in futures:")
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}if not future.running():")
@@ -446,6 +463,7 @@ def generate_code(json_data: dict) -> str:
     lines.append(f"{INDENT}{INDENT}{INDENT}{INDENT}process.cancel()")
     lines.append(f"{INDENT}{INDENT}{INDENT}executor.shutdown(wait=False, cancel_futures=True)")
     lines.append(f"{INDENT}{INDENT}{INDENT}sys.exit(1)")
+    lines.append(f"{INDENT}print(success)")
 
     lines.append('if __name__ == "__main__":')
     lines.append(f"{INDENT}main()")

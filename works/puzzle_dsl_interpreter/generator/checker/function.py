@@ -85,6 +85,8 @@ def cycle(e: Element, board: Board) -> int:
 
 def is_rectangle(elements: set[Element]) -> bool:
     """Check if the elements form a rectangle on a grid with all interior points filled."""
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     if not elements:
         return True
 
@@ -115,6 +117,8 @@ def is_rectangle(elements: set[Element]) -> bool:
 
 
 def is_square(elements: set[Element]) -> bool:
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     j_coords = {elem.j for elem in elements}
     i_coords = {elem.i for elem in elements}
 
@@ -128,6 +132,8 @@ def is_square(elements: set[Element]) -> bool:
 
 def all_different(elements: set[Element]) -> bool:
     """Check if all values in the set of Elements are unique."""
+    if not isinstance(elements, set):
+        raise PanicError(f"{elements} is not set")
     seen_values = set()
     if not same_attr(elements):
         return False

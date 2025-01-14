@@ -18,6 +18,7 @@ from generator.utils.logger import logger
 
 class File(OrderRule):
     def __init__(self):
+        store.initialize()
         order = [
             StructsDeclaration(),
             StructDefinitions(),
@@ -1102,7 +1103,7 @@ class StructElement(SingleRule):
 
 ## NOTE: WEIGHTを1以上にすると、再帰エラーが発生する。
 class GenerationSet(OrderRule):
-    WEIGHT = -3
+    WEIGHT = 1
 
     class SetWithoutGerationSet(AlternativeRule):
         def __init__(self):
@@ -1530,6 +1531,6 @@ class ConstraintDefinition(OrderRule):
 class ConstraintsDefinitions(MultipleRule):
     def __init__(self):
         rule = ConstraintDefinition
-        range = Range(min=2, max=3)
+        range = Range(min=1, max=1)
         order = repeat(rule, range)
         super().__init__(order=order)

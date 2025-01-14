@@ -28,12 +28,7 @@ tasks:
     cmds:
       - bash scripts/convert_tabs_to_spaces.sh
       - python scripts/convert_head_spaces_to_tabs.py
-      - |
-        if [ -z "{{.CLI_ARGS}}" ]; then
-          poetry run python puzzle_dsl_interpreter/main.py --action generator
-        else
-          poetry run python puzzle_dsl_interpreter/main.py --action generator -o {{.CLI_ARGS}}
-        fi
+      - poetry run python puzzle_dsl_interpreter/main.py --action generator
 
   analyze:
     desc: The task is to add analysis to the pzl file.
