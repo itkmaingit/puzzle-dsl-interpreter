@@ -1280,6 +1280,8 @@ class Boolean(AlternativeRule):
             return ret
 
     class IntValueComparison(OrderRule):
+        WEIGHT = 2
+
         class N_E_M_T(AlternativeRule):
             def __init__(self):
                 choices = [
@@ -1384,6 +1386,8 @@ class ParenthesizedBoolean(OrderRule):
 
 
 class QuantifierBoolean(OrderRule):
+    WEIGHT = 2
+
     def __init__(self):
         store.enter(Context.QUANTIFIER_BOOLEAN, self.__class__.__name__)
         order = [

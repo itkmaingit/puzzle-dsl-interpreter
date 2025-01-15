@@ -90,7 +90,7 @@ def run_tmp_py(code_str: str, pzl_str: str):
             return
         if "Panic" in stdout:
             Path.unlink(tmp_file_path)
-            print("panic error")
+            print(f"{stdout}")
             return
         if not ("301" in stdout or "10001" in stdout):
             Path("success").mkdir(exist_ok=True)
