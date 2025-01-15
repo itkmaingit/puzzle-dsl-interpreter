@@ -171,7 +171,7 @@ TOKEN_PATTERNS = {
     TokenType.FILL: r"^fill$",
     TokenType.SUM: r"^Sum$",
     TokenType.PRODUCT: r"^Product$",
-    TokenType.BOUND_VARIABLE: r"^[a-lo-wyz][a-z0-9]?$",
+    TokenType.BOUND_VARIABLE: r"^[b-hjkl-uwyz][a-z0-9]?$",
     TokenType.INF: r"^inf$",
     TokenType.HEIGHT: r"^n$",
     TokenType.WIDTH: r"^m$",

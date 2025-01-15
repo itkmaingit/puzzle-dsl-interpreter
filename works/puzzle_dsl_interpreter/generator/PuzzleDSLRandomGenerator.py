@@ -721,6 +721,8 @@ class Set(AlternativeRule):
 
 
 class SolutionFunction(OrderRule):
+    WEIGHT = 4
+
     def __init__(self):
         order = [
             token.Solution(),
@@ -858,6 +860,8 @@ class IsSquareFunction(OrderRule):
 
 
 class ConnectFunction(OrderRule):
+    WEIGHT = 3
+
     def __init__(self):
         order = [
             token.Connect(),

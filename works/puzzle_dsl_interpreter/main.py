@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import random
 import shutil
 import subprocess
 import sys
@@ -93,13 +94,22 @@ def run_tmp_py(code_str: str, pzl_str: str):
             return
         if not ("301" in stdout or "10001" in stdout):
             Path("success").mkdir(exist_ok=True)
-            shutil.copy(tmp_file_path, f"success/{uuid.uuid4()!s}.py")
+            filename = str(uuid.uuid4())
+            shutil.copy(tmp_file_path, f"success/{filename}.py")
+            with Path.open(f"success/{filename}.pzl", "w", encoding="utf-8") as f:
+                f.write(pzl_str)
         print(
             f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}".replace(
                 "\r",
                 "",
             ).replace("\n", ""),
         )
+        if random.random() < 1 / 100:
+            Path("samples").mkdir(exist_ok=True)
+            filename = str(uuid.uuid4())
+            shutil.copy(tmp_file_path, f"samples/{filename}.py")
+            with Path.open(f"samples/{filename}.pzl", "w", encoding="utf-8") as f:
+                f.write(pzl_str)
         Path.unlink(tmp_file_path)
 
     # 4. リターンコードが 0 の場合: stdout から成功回数を読み取り、data/[file].txt を作成して書き込む
