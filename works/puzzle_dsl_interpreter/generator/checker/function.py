@@ -37,17 +37,31 @@ def connect(e: Element, relationships: set[Relationship], board: Board) -> set[E
     elements: set
     if e.attr in {Attribute.C, Attribute.P}:
         elements = board.b(e.attr)
+        for other in elements:
+            if e != other:
+                if any(is_related(e, other, rel) for rel in relationships):
+                    neighbors.add(other)
     elif e.attr in {Attribute.Hp, Attribute.Vp}:
-        elements = board.b(Attribute.Ep)
+        elements: set[Element] = board.b(Attribute.Ep)
+        for other in elements:
+            if e != other:
+                if any(
+                    is_related(e, other, rel) and e.value == 1 and other.value == 1
+                    for rel in relationships
+                ):
+                    neighbors.add(other)
     elif e.attr in {Attribute.Hc, Attribute.Vc}:
         elements = board.b(Attribute.Ec)
+        for other in elements:
+            if e != other:
+                if any(
+                    is_related(e, other, rel) and other.value == 1
+                    for rel in relationships
+                ):
+                    neighbors.add(other)
     else:
         raise PanicError("given element's attr is not be allowed.")
 
-    for other in elements:
-        if e != other:
-            if any(is_related(e, other, rel) for rel in relationships):
-                neighbors.add(other)
     return neighbors
 
 
@@ -168,14 +182,24 @@ def is_exists(elements: set[Element], filter: Callable[[Element], bool]) -> bool
     """Check if any element in the set satisfies the filter."""
     if not isinstance(elements, set):
         raise PanicError(f"{elements} is not set")
-    return any(filter(e) for e in elements)
+    if len(elements) == 0:
+        return False
+    for e in elements:
+        if filter(e):
+            return True
+    return False
 
 
 def is_all(elements: set[Element], filter: Callable[[Element], bool]) -> bool:
     """Check if all elements in the set satisfy the filter."""
     if not isinstance(elements, set):
         raise PanicError(f"{elements} is not set")
-    return all(filter(e) for e in elements)
+    if len(elements) == 0:
+        return False
+    for e in elements:
+        if not filter(e):
+            return False
+    return True
 
 
 def not_bool(P: bool):
@@ -213,7 +237,7 @@ def int_value_comparison(op: str, left: int, right: int) -> bool:
         case "<":
             return left < right
         case ">":
-            return left < right
+            return left > right
 
         case _:
             raise PanicError("Unsupported int comparison operator.")

@@ -4,13 +4,14 @@ from copy import deepcopy
 from typing import NoReturn
 
 from generator.definitions.errors import DuplicationVariableError, NotDeletableError
+from generator.stores.store import BoundVariableData
 from generator.utils.logger import logger
 
 
 class VariableStore:
     def __init__(self, is_deletable: bool, is_duplicatable: bool = False) -> NoReturn:  # noqa: FBT002
-        self.var: list[str] = []
-        self.__var_save: list[str] = []
+        self.var: list[str | BoundVariableData] = []
+        self.__var_save: list[str | BoundVariableData] = []
         self.__is_deletable = is_deletable
         self.__is_duplicatable = is_duplicatable
 
@@ -23,7 +24,7 @@ class VariableStore:
         self.var = []
         self.__var_save = []
 
-    def add(self, text: str):
+    def add(self, text: str | BoundVariableData):
         if (text in self.var) and (not self.__is_duplicatable):
             raise DuplicationVariableError(f"重複があるようです。{text}")
         self.var.append(text)
@@ -35,7 +36,7 @@ class VariableStore:
         self.__check_deletable()
         return self.var.pop(-1)
 
-    def remove(self, text: str):
+    def remove(self, text: str | BoundVariableData):
         self.__check_deletable()
         if text in self.var:
             self.var.remove(text)

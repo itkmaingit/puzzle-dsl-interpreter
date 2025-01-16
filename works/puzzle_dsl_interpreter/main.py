@@ -14,6 +14,8 @@ from antlr4 import FileStream
 from errors.error import InvalidArgumentsError
 from generator import PuzzleDSLRandomGenerator
 from generator.checker.main import generate_code
+from generator.definitions.errors import UnableToContinueError
+from generator.utils.logger import logger
 from interpreter.PuzzleDSLInterpreter import PuzzleDSLInterpreter
 
 success_times = 0
@@ -29,7 +31,10 @@ def generate():
                 generator = PuzzleDSLRandomGenerator.File()
                 break
             except RecursionError as e:
+                # logger.error("再帰エラーが発生しました。")
                 pass
+            except UnableToContinueError as e:
+                logger.info(e)
 
         sentence = ""
         for token in generator.generate():
@@ -44,15 +49,6 @@ def generate():
             print(traceback.format_exc())
             sys.exit(1)
         run_tmp_py(checker_code, sentence)
-
-    # if filepath:
-    #     with Path(filepath + ".pzl").open(mode="w", encoding="utf-8") as f:
-    #         f.write(sentence)
-    #     with Path(filepath + ".json").open(mode="w", encoding="utf-8") as f:
-    #         json.dump(data, f, indent=2)
-    # else:
-    #     print(sentence)
-    #     print(json.dumps(data, indent=2))
 
 
 def interpret(filepath: str):
@@ -89,15 +85,24 @@ def run_tmp_py(code_str: str, pzl_str: str):
             print("unknown error")
             return
         if "Panic" in stdout:
-            Path.unlink(tmp_file_path)
             print(f"{stdout}")
+            if random.random() < 1 / 60:
+                Path("panic").mkdir(exist_ok=True)
+                filename = str(uuid.uuid4())
+                shutil.copy(tmp_file_path, f"panic/{filename}.py")
+                with Path.open(f"panic/{filename}.pzl", "w", encoding="utf-8") as f:
+                    f.write(pzl_str)
+                return
+            Path.unlink(tmp_file_path)
             return
-        if not ("301" in stdout or "10001" in stdout):
+        if not (stdout.count("38") == 2 or "10001" in stdout):
             Path("success").mkdir(exist_ok=True)
             filename = str(uuid.uuid4())
             shutil.copy(tmp_file_path, f"success/{filename}.py")
             with Path.open(f"success/{filename}.pzl", "w", encoding="utf-8") as f:
                 f.write(pzl_str)
+            with Path.open(f"success/{filename}.txt", "w", encoding="utf-8") as f:
+                f.write(stdout)
         print(
             f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}".replace(
                 "\r",
@@ -131,6 +136,7 @@ def run_tmp_py(code_str: str, pzl_str: str):
             f.write(success_count)
         with Path.open(output_pzl_path, "w", encoding="utf-8") as f:
             f.write(pzl_str)
+        shutil.copy(tmp_file_path, f"data/{unique_id}.py")
         print("############# 成功!!!!!!!!!!!!!!!! ###################")
         print(f"成功回数 : {success_count}")
         print(pzl_str)

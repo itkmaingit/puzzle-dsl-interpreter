@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import copy
 
+from generator.checker.dataclass import Attribute
+from generator.definitions.constants import BoundVariableData
+from generator.definitions.errors import UnableToContinueError
 from generator.definitions.rules import (
     AlternativeRule,
     MultipleRule,
@@ -70,21 +73,31 @@ class ConstraintsDeclaration(OrderRule):
 
 
 class StructId(AlternativeRule):
-    def __init__(self):
-        choices = [
-            token.P,
-            token.C,
-            token.EP,
-            token.EC,
-        ]
+    def __init__(self, attr: Attribute | None = None):
+        match attr:
+            case Attribute.P:
+                choices = [token.P]
+            case Attribute.C:
+                choices = [token.C]
+            case Attribute.Ec:
+                choices = [token.EC]
+            case Attribute.Ep:
+                choices = [token.EP]
+            case _:
+                choices = [token.P, token.C, token.EC, token.EP]
         # if (
         #     store.count_new_structs >= 2
         #     or store.context != Context.STRUCT_DEFINITION_BODY
         # ):
         #     choices.append(token.NewStructId)
         choice = lottery(choices, self.__class__.__name__)()
+        self.__attr = choice.attr
         super().__init__(choice=choice)
         store.register_target_structs(choice.to_json())
+
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
 
 
 class StructDefinitionBody(OrderRule):
@@ -646,7 +659,7 @@ class Int(AlternativeRule):
         def __init__(self):
             order = [
                 token.LeftAbsolute(),
-                Set(),
+                PartialSet(),
                 token.RightAbsolute(),
             ]
             super().__init__(order=order)
@@ -661,19 +674,18 @@ class Int(AlternativeRule):
 
     def __init__(self):
         choices = [
-            token.Number,
+            # token.Number,
             token.Width,
             token.Height,
             self.AbsoluteSet,
             self.RecursionInt,
         ]
         if store.exists_bound_variables():
-            choices += [
-                SolutionFunction,
-                CrossFunction,
-                CycleFunction,
-                # IndexFunction,
-            ]
+            choices.append(SolutionFunction)
+        if store.exists_specific_attr_bound_variables(Attribute.P):
+            choices.append(CrossFunction)
+        if store.exists_specific_attr_bound_variables(Attribute.C):
+            choices.append(CycleFunction)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -709,15 +721,36 @@ class PrimitiveValue(AlternativeRule):
 
 
 class Set(AlternativeRule):
-    def __init__(self):
+    def __init__(self, attr: Attribute | None = None):
         choices = [
             BFunction,
             GenerationSet,
         ]
-        if len(store.ok_bound_variables) >= 1:
-            choices += [StructElement, ConnectFunction]
+        if len(store.bound_variables) >= 1:
+            choices += [ConnectFunction]
+        choice = lottery(choices, self.__class__.__name__)(attr)
+        self.__attr = choice.attr
+        super().__init__(choice=choice)
+
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
+
+
+class PartialSet(AlternativeRule):
+    def __init__(self):
+        choices = [
+            GenerationSet,
+        ]
+        if len(store.bound_variables) >= 1:
+            choices += [ConnectFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
+        self.__attr = choice.attr
+
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
 
 
 class SolutionFunction(OrderRule):
@@ -727,7 +760,7 @@ class SolutionFunction(OrderRule):
         order = [
             token.Solution(),
             token.LParen(),
-            StructElement(),
+            StructElement(None),
             token.RParen(),
         ]
         super().__init__(order=order)
@@ -742,16 +775,15 @@ class SolutionFunction(OrderRule):
 
 
 class BFunction(OrderRule):
-    WEIGHT = 1
-
-    def __init__(self):
+    def __init__(self, attr: Attribute | None):
         store.enter(Context.B_FUNCTION, self.__class__.__name__)
-        order = [
-            token.B(),
-            token.LParen(),
-            StructId(),
-            token.RParen(),
-        ]
+        b = token.B()
+        lparen = token.LParen()
+        struct_id = StructId(attr)
+        rparen = token.RParen()
+        self.__attr = struct_id.attr
+        order = [b, lparen, struct_id, rparen]
+
         super().__init__(order=order)
         store.exit(self.__class__.__name__)
 
@@ -763,16 +795,21 @@ class BFunction(OrderRule):
         }
         return ret
 
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
+
 
 class CrossFunction(OrderRule):
     def __init__(self):
         order = [
             token.Cross(),
             token.LParen(),
-            StructElement(),
+            StructElement(Attribute.P),
             token.RParen(),
         ]
         super().__init__(order=order)
+        store.register_target_structs("Ep")
 
     def to_json(self):
         ret = {
@@ -788,9 +825,10 @@ class CycleFunction(OrderRule):
         order = [
             token.Cycle(),
             token.LParen(),
-            StructElement(),
+            StructElement(Attribute.C),
             token.RParen(),
         ]
+        store.register_target_structs("Ep")
         super().__init__(order=order)
 
     def to_json(self):
@@ -807,7 +845,7 @@ class AllDifferentFunction(OrderRule):
         order = [
             token.AllDifferent(),
             token.LParen(),
-            StructElement(),
+            PartialSet(),
             token.RParen(),
         ]
         super().__init__(order=order)
@@ -826,7 +864,7 @@ class IsRectangleFunction(OrderRule):
         order = [
             token.IsRectangle(),
             token.LParen(),
-            StructElement(),
+            PartialSet(),
             token.RParen(),
         ]
         super().__init__(order=order)
@@ -845,7 +883,7 @@ class IsSquareFunction(OrderRule):
         order = [
             token.IsSquare(),
             token.LParen(),
-            StructElement(),
+            PartialSet(),
             token.RParen(),
         ]
         super().__init__(order=order)
@@ -862,11 +900,13 @@ class IsSquareFunction(OrderRule):
 class ConnectFunction(OrderRule):
     WEIGHT = 3
 
-    def __init__(self):
+    def __init__(self, attr: Attribute | None = None):
+        struct_element = StructElement(attr)
+        self.__attr = struct_element.attr
         order = [
             token.Connect(),
             token.LParen(),
-            StructElement(),
+            struct_element,
             token.Comma(),
             token.Space(),
             RelationshipSet(),
@@ -884,6 +924,10 @@ class ConnectFunction(OrderRule):
             },
         }
         return ret
+
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
 
 
 class NoOverlapFunction(OrderRule):
@@ -985,22 +1029,26 @@ class Quantifier(OrderRule):
             super().__init__(choice=choice)
 
     def __init__(self):
+        universal_set = Set()
+        attr = universal_set.attr
         order = [
             self.A_E(),
             token.LParen(),
-            token.BoundVariable(),
+            token.BoundVariable(attr),
             token.RParen(),
             token.Space(),
             token.In(),
             token.Space(),
+            universal_set,
         ]
-        concealed_value = store.conceal_bound_variable()
-        order += [Set()]
-        store.restore_bound_variable(concealed_value)
+        # concealed_value = store.conceal_bound_variable()
+        # order += [Set()]
+        # store.restore_bound_variable(concealed_value)
         super().__init__(order=order)
+        self.__data = self.get(2).data
 
     def cleanup(self):
-        store.remove_bound_variable(self.get(2).text)
+        store.remove_bound_variable(self.__data)
 
     @property
     def properties(self):
@@ -1010,6 +1058,10 @@ class Quantifier(OrderRule):
             "universal_set": self.get(7).to_json(),
         }
         return ret
+
+    @property
+    def data(self) -> BoundVariableData:
+        return self.__data
 
 
 class Index(OrderRule):
@@ -1095,44 +1147,50 @@ class IndexFunction(OrderRule):
 
 
 class StructElement(SingleRule):
-    def __init__(self):
+    def __init__(self, attr: Attribute | None = None):
         store.enter(Context.STRUCT_ELEMENT, self.__class__.__name__)
-        rule = token.BoundVariable()
+        rule = token.BoundVariable(attr)
+        self.__attr = rule.attr
         super().__init__(rule=rule)
         store.exit(self.__class__.__name__)
 
     def cleanup(self):
         store.remove_bound_variable(self.text)
 
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
+
 
 ## NOTE: WEIGHTを1以上にすると、再帰エラーが発生する。
 class GenerationSet(OrderRule):
-    WEIGHT = 1
-
     class SetWithoutGerationSet(AlternativeRule):
-        def __init__(self):
+        def __init__(self, attr: Attribute | None):
             choices = [
                 BFunction,
             ]
-            if len(store.ok_bound_variables) >= 1:
-                choices += [StructElement, ConnectFunction]
-            choice = lottery(choices, self.__class__.__name__)()
+            if len(store.bound_variables) >= 1:
+                choices += [ConnectFunction]
+            choice = lottery(choices, self.__class__.__name__)(attr)
+            self.__attr = choice.attr
             super().__init__(choice=choice)
 
-    def __init__(self):
+        @property
+        def attr(self) -> Attribute:
+            return self.__attr
+
+    def __init__(self, attr: Attribute | None = None):
         store.enter(Context.GENERATION_SET, self.__class__.__name__)
+        universal_set = self.SetWithoutGerationSet(attr)
+        self.__attr = universal_set.attr
         order = [
             token.LCurly(),
             token.Space(),
-            token.BoundVariable(),
+            token.BoundVariable(self.__attr),
             token.Space(),
             token.In(),
             token.Space(),
-        ]
-        concealed_value = store.conceal_bound_variable()
-        order.append(self.SetWithoutGerationSet())
-        store.register_bound_variables(concealed_value)
-        order += [
+            universal_set,
             token.Space(),
             token.Pipe(),
             token.Space(),
@@ -1140,8 +1198,23 @@ class GenerationSet(OrderRule):
             token.Space(),
             token.RCurly(),
         ]
+        # concealed_value = store.conceal_bound_variable()
+        # order.append(self.SetWithoutGerationSet())
+        # store.register_bound_variables(concealed_value)
+        # order += [
+        #     token.Space(),
+        #     token.Pipe(),
+        #     token.Space(),
+        #     CompoundBoolean(),
+        #     token.Space(),
+        #     token.RCurly(),
+        # ]
         super().__init__(order=order)
-        store.remove_bound_variable(self.get(2).text)
+        if self.get(2).data.appearance_count == 0:
+            raise UnableToContinueError(
+                "generation setの中で束縛変数が登場しませんでした",
+            )
+        store.remove_bound_variable(self.get(2).data)
 
     def to_json(self):
         ret = {
@@ -1155,27 +1228,53 @@ class GenerationSet(OrderRule):
         }
         return ret
 
+    @property
+    def attr(self) -> Attribute:
+        return self.__attr
+
 
 class Boolean(AlternativeRule):
     WEIGHT = 5
 
-    class SetComparison(OrderRule):
-        class S_I(AlternativeRule):
-            def __init__(self):
-                choices = [
-                    token.Subset,
-                    token.In,
-                ]
-                choice = lottery(choices, self.__class__.__name__)()
-                super().__init__(choice=choice)
-
+    class SubsetComparison(OrderRule):
         def __init__(self):
+            left = Set()
+            right = Set()
+            if left.attr != right.attr:
+                UnableToContinueError("left.attr != right.attr")
             order = [
-                Set(),
+                left,
                 token.Space(),
-                self.S_I(),
+                token.Subset(),
                 token.Space(),
-                Set(),
+                right,
+            ]
+            super().__init__(order=order)
+
+        def to_json(self):
+            ret = {
+                "type": "boolean",
+                "name": "set_comparison",
+                "properties": {
+                    "op": self.get(2).to_json(),
+                },
+                "args": {
+                    "left": self.get(0).to_json(),
+                    "right": self.get(4).to_json(),
+                },
+            }
+            return ret
+
+    class InComparison(OrderRule):
+        def __init__(self):
+            right = Set()
+            left = StructElement(right.attr)
+            order = [
+                left,
+                token.Space(),
+                token.In(),
+                token.Space(),
+                right,
             ]
             super().__init__(order=order)
 
@@ -1221,9 +1320,18 @@ class Boolean(AlternativeRule):
                     token.EmptySet,
                 ]
                 choice = lottery(choices, self.__class__.__name__)()
+                self.__attr = choice.attr
                 super().__init__(choice=choice)
 
+            @property
+            def attr(self) -> Attribute | None:
+                return self.__attr
+
         def __init__(self):
+            left = Set()
+            right = self.S_E()
+            if right.attr and left.attr != right.attr:
+                raise UnableToContinueError("setのattrが適切ではありません。")
             order = [
                 Set(),
                 token.Space(),
@@ -1280,7 +1388,7 @@ class Boolean(AlternativeRule):
             return ret
 
     class IntValueComparison(OrderRule):
-        WEIGHT = 2
+        WEIGHT = 6
 
         class N_E_M_T(AlternativeRule):
             def __init__(self):
@@ -1317,14 +1425,15 @@ class Boolean(AlternativeRule):
 
     def __init__(self):
         choices = [
-            self.SetComparison,
+            self.SubsetComparison,
+            self.InComparison,
             # self.IntInInterger, // Not to need
             self.SetEquality,
             # self.PrimitiveValueComparison,
             self.IntValueComparison,
         ]
-        if store.exists_bound_variables():
-            choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
+        # if store.exists_bound_variables():
+        #     choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -1340,15 +1449,17 @@ class SingleBoolean(AlternativeRule):
     def __init__(self):
         choices = [
             Boolean,
-            # ParenthesizedBoolean,
-            QuantifierBoolean,
         ]
+        if store.can_choose_quantifier_boolean_counts:
+            choices.append(QuantifierBoolean)
         if not self.PREVENT_NOT_BOOLEAN:
             choices.append(NotBoolean)
         choice = lottery(choices, self.__class__.__name__)
         logger.debug(choice.__name__)
         if choice.__name__ == "NotBoolean":
             self.PREVENT_NOT_BOOLEAN = True
+        if choice.__name__ == "QuantifierBoolean":
+            store.choose_quantifier_boolean()
         super().__init__(choice=choice())
 
 
@@ -1399,6 +1510,10 @@ class QuantifierBoolean(OrderRule):
             token.RParen(),
         ]
         super().__init__(order=order)
+        if self.get(0).data.appearance_count == 0:
+            raise UnableToContinueError(
+                "Quantifier Booleanの中で束縛変数が使われませんでした。",
+            )
         self.get(0).cleanup()
 
     def to_json(self):
@@ -1415,7 +1530,7 @@ class CompoundBoolean(OrderRule):
     class MultipleAdditionalBoolean(MultipleRule):
         def __init__(self):
             rule = self.AdditionalBoolean
-            range = Range(min=0, max=1)
+            range = Range(min=0, max=0)
             order = repeat(rule, range)
             super().__init__(order=order)
 

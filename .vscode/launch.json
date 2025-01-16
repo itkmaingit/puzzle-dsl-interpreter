@@ -23,6 +23,16 @@
       "env": {
         "PYTHONPATH": "${workspaceFolder}"
       }
+    },
+    {
+      "name": "rule debug",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "/home/node/works/data/68a4cff3-588a-4a9a-bce9-88335f95c3f2.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
     }
   ]
 }

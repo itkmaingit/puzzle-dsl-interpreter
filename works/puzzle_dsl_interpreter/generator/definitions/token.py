@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-import re
 from enum import IntEnum, auto
 
 import exrex
@@ -38,17 +37,14 @@ class Token(BaseModel):
             in_ng = True
             while in_ng:
                 if i > LIMIT:
-                    logger.debug(" 適切な変数を選べませんでした。")
+                    logger.info(" 適切な変数を選べませんでした。")
                     store.initialize()
-                    raise RecursionError
+                    raise UnableToContinueError
                 text = exrex.getone(pattern)
                 in_ng = text in ng
                 i += 1
         else:
             text = exrex.getone(pattern)
-        if not re.match(pattern, text):
-            logger.debug(f"text: {text}, pattern: {pattern}, ok: {ok}")
-            raise ValueError("Tokenの文字列が不正です。")
         super().__init__(type=type, text=text)
         if error_flag:
             logger.error(f"[red] Undefined Variable: {text}")
