@@ -1,0 +1,45 @@
+{
+  "rule": {
+    "structs": [
+      {
+        "name": "A1",
+        "base": "C",
+        "relationship": [
+          "H",
+          "V"
+        ]
+      }
+    ],
+    "domain": [
+      {
+        "struct": "P",
+        "domain": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "hidden": [
+          1,
+          2,
+          3,
+          4,
+          "undefined"
+        ]
+      }
+    ],
+    "constraints": [
+      {
+        "variable": "C",
+        "constraint": {
+          "quantifier": {
+            "kind": "all",
+            "set": "X",
+            "variable": "x",
+            "condition": {}
+          }
+        }
+      }
+    ]
+  }
+}

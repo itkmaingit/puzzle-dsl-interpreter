@@ -1,43 +1,154 @@
 from __future__ import annotations
 
-import json
+import importlib
+import random
+import shutil
+import subprocess
 import sys
+import time
+import traceback
+import uuid
 from argparse import ArgumentParser
 from pathlib import Path
 
 from antlr4 import FileStream
 from errors.error import InvalidArgumentsError
-from generator.PuzzleDSLRandomGenerator import File
+from generator import PuzzleDSLRandomGenerator
+from generator.checker.main import generate_code
+from generator.definitions.errors import UnableToContinueError
 from generator.utils.logger import logger
 from interpreter.PuzzleDSLInterpreter import PuzzleDSLInterpreter
 
+success_times = 0
+try_times = 0
 
-def generate(filepath: str):
-    sys.setrecursionlimit(1000)
+
+def generate():
+    start = time.perf_counter()
     while True:
-        try:
-            generator = File()
-            break
-        except RecursionError:
-            logger.debug("Recursion error.")
+        sys.setrecursionlimit(1000)
+        while True:
+            try:
+                importlib.reload(PuzzleDSLRandomGenerator)
+                generator = PuzzleDSLRandomGenerator.File()
+                break
+            except RecursionError as e:
+                # logger.error("再帰エラーが発生しました。")
+                pass
+            except UnableToContinueError as e:
+                logger.info(e)
 
-    sentence = ""
-    for token in generator.generate():
-        sentence += token.text
-    data = generator.to_json()
-    if filepath:
-        with Path(filepath + ".pzl").open(mode="w", encoding="utf-8") as f:
-            f.write(sentence)
-        with Path(filepath + ".json").open(mode="w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    else:
-        print(sentence)
-        print(json.dumps(data, indent=2))
+        sentence = ""
+        for token in generator.generate():
+            sentence += token.text
+
+        data = generator.to_json()
+        try:
+            checker_code = generate_code(data)
+        except Exception as e:
+            print(data)
+            print(e)
+            print(traceback.format_exc())
+            sys.exit(1)
+        run_tmp_py(checker_code, sentence, start)
 
 
 def interpret(filepath: str):
     input_stream = FileStream(filepath, encoding="utf-8")
     PuzzleDSLInterpreter(input_stream)
+
+
+def run_tmp_py(code_str: str, pzl_str: str, start: float):
+    global success_times
+    global try_times
+    try_times += 1
+    tmp_file_path = "puzzle_dsl_interpreter/generator/checker/tmp.py"
+
+    # 1. tmp.py にコードを書き込む
+    with Path.open(tmp_file_path, "w", encoding="utf-8") as f:
+        f.write(code_str)
+
+    # 2. poetry run python3 puzzle_dsl_interpreter/generator/checker/tmp.py を実行
+    process = subprocess.Popen(
+        ["poetry", "run", "python3", tmp_file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,  # Python 3.7+ なら、文字列として受け取るために text=True が使えます
+    )
+
+    stdout, stderr = process.communicate()
+    return_code = process.returncode
+    end = time.perf_counter()
+    time_diff = end - start
+
+    # 3. リターンコードが 1 の場合: tmp.py を削除
+    if return_code == 1:
+        if "Unknown" in stdout:
+            Path("failed").mkdir(exist_ok=True)
+            shutil.copy(tmp_file_path, f"failed/{uuid.uuid4()!s}.py")
+            print("unknown error")
+            return
+        if "Panic" in stdout:
+            print(f"{stdout}")
+            if random.random() < 1 / 60:
+                Path("panic").mkdir(exist_ok=True)
+                filename = str(uuid.uuid4())
+                shutil.copy(tmp_file_path, f"panic/{filename}.py")
+                with Path.open(f"panic/{filename}.pzl", "w", encoding="utf-8") as f:
+                    f.write(pzl_str)
+                return
+            Path.unlink(tmp_file_path)
+            return
+        if not (stdout.count("38") == 2 or "10001" in stdout):
+            Path("success").mkdir(exist_ok=True)
+            filename = str(uuid.uuid4())
+            shutil.copy(tmp_file_path, f"success/{filename}.py")
+            with Path.open(f"success/{filename}.pzl", "w", encoding="utf-8") as f:
+                f.write(pzl_str)
+            with Path.open(f"success/{filename}.txt", "w", encoding="utf-8") as f:
+                f.write(stdout)
+
+        print(
+            f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}, 実行時間: {time_diff}".replace(
+                "\r",
+                "",
+            ).replace("\n", ""),
+        )
+        # if random.random() < 1 / 100:
+        #     Path("samples").mkdir(exist_ok=True)
+        #     filename = str(uuid.uuid4())
+        #     shutil.copy(tmp_file_path, f"samples/{filename}.py")
+        #     with Path.open(f"samples/{filename}.pzl", "w", encoding="utf-8") as f:
+        #         f.write(pzl_str)
+        # Path.unlink(tmp_file_path)
+
+    # 4. リターンコードが 0 の場合: stdout から成功回数を読み取り、data/[file].txt を作成して書き込む
+    if return_code == 0:
+        success_times += 1
+        success_count = stdout.strip()
+        print(f"Success count: {success_count}")
+
+        # 一意な文字列を生成 (例: UUID4)
+        unique_id = str(uuid.uuid4())
+
+        # data ディレクトリが存在しない場合は作成しておく
+        Path("data").mkdir(exist_ok=True)
+
+        output_file_path = f"data/{unique_id}.txt"
+        output_pzl_path = f"data/{unique_id}.pzl"
+
+        with Path.open(output_file_path, "w", encoding="utf-8") as f:
+            f.write(success_count)
+        with Path.open(output_pzl_path, "w", encoding="utf-8") as f:
+            f.write(pzl_str)
+        with Path.open("time.txt", "a", encoding="utf-8") as f:
+            f.write(str(time_diff) + "\n")
+        shutil.copy(tmp_file_path, f"data/{unique_id}.py")
+        print("############# 成功!!!!!!!!!!!!!!!! ###################")
+        print(f"成功回数 : {success_count}")
+        print(pzl_str)
+        print("######################################################")
+        print()
 
 
 if __name__ == "__main__":
@@ -68,4 +179,4 @@ if __name__ == "__main__":
         interpret(filepath)
     else:
         filepath = arg_parser.parse_args().output
-        generate(filepath)
+        generate()

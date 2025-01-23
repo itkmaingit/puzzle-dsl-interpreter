@@ -1,0 +1,120 @@
+{
+  "type": "boolean",
+  "name": "quantifier",
+  "properties": {
+    "quantifier": "All",
+    "variable": "dd",
+    "universal_set": {
+      "type": "set",
+      "name": "B",
+      "args": {
+        "struct": "P"
+      }
+    }
+  },
+  "args": {
+    "type": "boolean",
+    "name": "compound",
+    "properties": {
+      "op": "=>"
+    },
+    "args": {
+      "right": {
+        "type": "boolean",
+        "name": "not",
+        "args": {
+          "type": "boolean",
+          "name": "compound",
+          "properties": {
+            "op": "&&"
+          },
+          "args": {
+            "right": {
+              "type": "boolean",
+              "name": "set_equation",
+              "properties": {
+                "op": "=="
+              },
+              "args": {
+                "left": {
+                  "type": "set",
+                  "name": "connect",
+                  "args": {
+                    "variable": "dd",
+                    "relationship": [
+                      "D",
+                      "H"
+                    ]
+                  }
+                },
+                "right": {
+                  "type": "set",
+                  "name": "connect",
+                  "args": {
+                    "variable": {
+                      "type": "set",
+                      "name": "B",
+                      "args": {
+                        "struct": "P"
+                      }
+                    },
+                    "relationship": [
+                      "H",
+                      "V"
+                    ]
+                  }
+                }
+              }
+            },
+            "left": {
+              "type": "boolean",
+              "name": "int_value_comparison",
+              "properties": {
+                "op": "!="
+              },
+              "args": {
+                "left": {
+                  "type": "value",
+                  "name": "int",
+                  "args": {
+                    "value": {
+                      "type": "value",
+                      "name": "cross",
+                      "args": {
+                        "variable": "dd"
+                      }
+                    }
+                  }
+                },
+                "right": {
+                  "type": "value",
+                  "name": "int",
+                  "args": {
+                    "value": {
+                      "type": "value",
+                      "name": "cross",
+                      "args": {
+                        "variable": "dd"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "left": {
+        "type": "boolean",
+        "name": "not",
+        "args": {
+          "type": "boolean",
+          "name": "all_different",
+          "args": {
+            "variable": "dd"
+          }
+        }
+      }
+    }
+  }
+}

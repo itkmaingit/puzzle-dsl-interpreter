@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from generator.checker.dataclass import Attribute
+from generator.definitions.constants import BoundVariableData
 from generator.stores.context import Context, ContextStore
 from generator.stores.variables import VariableStore
 from generator.utils.logger import logger
@@ -9,25 +11,7 @@ from generator.utils.logger import logger
 
 class StateStore:
     def __init__(self):
-        self.__defined_struct_store = VariableStore(
-            is_deletable=False,
-        )  # Forbidden to delete element
-        self.__constants_store = VariableStore(
-            is_deletable=False,
-        )  # Forbidden to delete element
-
-        self.__new_struct_store = VariableStore(is_deletable=True)
-        self.__relationship_store = VariableStore(is_deletable=True)
-        self.__bound_variables_store = VariableStore(is_deletable=True)
-        self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
-        self.__target_structs_store = VariableStore(
-            is_deletable=True,
-            is_duplicatable=True,
-        )
-
-        self.__ctx_store = ContextStore()
-
-        self.__defined_struct_store.add_all(["P", "C", "Ep", "Ec"])
+        self.initialize()
 
     @property
     def context(self) -> Context:
@@ -58,25 +42,34 @@ class StateStore:
         return len(self.new_structs)
 
     @property
-    def ok_bound_variables(self) -> list[str]:
-        return list(
-            set(self.__bound_variables_store.var)
-            - set(self.__tmp_banned_bound_variables_store.var),
-        )
+    def bound_variables(self) -> list[BoundVariableData]:
+        return self.__bound_variables_store.var
 
-    @property
-    def ng_bound_variables(self) -> list[str]:
-        return (
-            self.__bound_variables_store.var
-            + self.__tmp_banned_bound_variables_store.var
-        )
+    # @property
+    # def ng_bound_variables(self) -> list[str]:
+    #     return (
+    #         self.__bound_variables_store.var
+    #         # + self.__tmp_banned_bound_variables_store.var
+    #     )
 
     @property
     def target_structs(self) -> list[str]:
         return list(set(self.__target_structs_store.var))
 
+    @property
+    def can_choose_quantifier_boolean_counts(self) -> int:
+        return self.__choose_quantifier_boolean_counts < 4
+
+    @property
+    def all_target_structs(self) -> list[str]:
+        return list(set(self.__all_targets))
+
     def exists_bound_variables(self) -> bool:
-        return len(self.ok_bound_variables) >= 1
+        return len(self.bound_variables) >= 1
+
+    def exists_specific_attr_bound_variables(self, attr: Attribute) -> bool:
+        filtered_list = [elem for elem in store.bound_variables if elem.attr == attr]
+        return len(filtered_list) >= 1
 
     def register_struct(self, struct_id: str):
         self.__defined_struct_store.add(struct_id)
@@ -88,7 +81,7 @@ class StateStore:
     def register_constants(self, constants_id: str):
         self.__constants_store.add(constants_id)
 
-    def register_bound_variables(self, bound_variables_id: str):
+    def register_bound_variables(self, bound_variables_id: str | BoundVariableData):
         self.__bound_variables_store.add(bound_variables_id)
 
     def remove_struct(self, struct_id: str):
@@ -139,14 +132,14 @@ class StateStore:
     def exit_constraint_definition(self):
         self.__bound_variables_store.reset()
 
-    def conceal_bound_variable(self) -> str:
-        concealed_value = self.__bound_variables_store.pop()
-        self.__tmp_banned_bound_variables_store.add(concealed_value)
-        return concealed_value
+    # def conceal_bound_variable(self) -> str:
+    #     concealed_value = self.__bound_variables_store.pop()
+    #     self.__tmp_banned_bound_variables_store.add(concealed_value)
+    #     return concealed_value
 
-    def restore_bound_variable(self, concealed_value: str):
-        self.__tmp_banned_bound_variables_store.remove(concealed_value)
-        self.__bound_variables_store.add(concealed_value)
+    # def restore_bound_variable(self, concealed_value: str):
+    #     self.__tmp_banned_bound_variables_store.remove(concealed_value)
+    #     self.__bound_variables_store.add(concealed_value)
 
     def register_target_structs(self, target: str | list[str]):
         if isinstance(target, list):
@@ -154,8 +147,43 @@ class StateStore:
         else:
             self.__target_structs_store.add(target)
 
-    def remove_bound_variable(self, bound_variable: str):
+    def remove_bound_variable(self, bound_variable: BoundVariableData):
         self.__bound_variables_store.remove(bound_variable)
+
+    def choose_quantifier_boolean(self):
+        self.__choose_quantifier_boolean_counts += 1
+
+    def gen_bound_variable_name(self) -> str:
+        self.__bound_variable_counter += 1
+        return f"b{self.__bound_variable_counter}"
+
+    def determine_target_structs(self, targets: list[str]):
+        self.__all_targets.extend(targets)
+
+    def initialize(self):
+        self.__defined_struct_store = VariableStore(
+            is_deletable=False,
+        )  # Forbidden to delete element
+        self.__constants_store = VariableStore(
+            is_deletable=False,
+        )  # Forbidden to delete element
+
+        self.__new_struct_store = VariableStore(is_deletable=True)
+        self.__relationship_store = VariableStore(is_deletable=True)
+        self.__bound_variables_store = VariableStore(is_deletable=True)
+        # self.__tmp_banned_bound_variables_store = VariableStore(is_deletable=True)
+        self.__target_structs_store = VariableStore(
+            is_deletable=True,
+            is_duplicatable=True,
+        )
+
+        self.__ctx_store = ContextStore()
+
+        self.__defined_struct_store.add_all(["P", "C", "Ep", "Ec"])
+
+        self.__choose_quantifier_boolean_counts = 0
+        self.__bound_variable_counter = 0
+        self.__all_targets = []
 
     # --------------------for debug------------------------
     def exit_struct_definitions(self):

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import random
+
+from generator.checker.dataclass import Attribute
+from generator.checker.errors import UnknownError
+from generator.definitions.errors import UnableToContinueError
 from generator.definitions.rules import RawToken
 from generator.definitions.token import Token, TokenType
 from generator.stores.context import Context
-from generator.stores.store import store
+from generator.stores.store import BoundVariableData, store
 
 
 class StructsDeclaration(RawToken):
@@ -29,23 +34,41 @@ class P(RawToken):
         token = Token(type=TokenType.P)
         super().__init__(token=token)
 
+    @property
+    def attr(self) -> Attribute:
+        return Attribute.P
+
 
 class C(RawToken):
     def __init__(self):
         token = Token(type=TokenType.C)
         super().__init__(token=token)
 
+    @property
+    def attr(self) -> Attribute:
+        return Attribute.C
+
 
 class EP(RawToken):
+    WEIGHT = 2
+
     def __init__(self):
         token = Token(type=TokenType.EP)
         super().__init__(token=token)
+
+    @property
+    def attr(self) -> Attribute:
+        return Attribute.Ep
 
 
 class EC(RawToken):
     def __init__(self):
         token = Token(type=TokenType.EC)
         super().__init__(token=token)
+
+    @property
+    def attr(self) -> Attribute:
+        return Attribute.Ec
 
 
 class NewStructId(RawToken):
@@ -197,26 +220,47 @@ class Product(RawToken):
 
 
 class BoundVariable(RawToken):
-    def __init__(self):
+    def __init__(self, attr: Attribute | None = None):
         type = TokenType.BOUND_VARIABLE
         if store.context in [Context.STRUCT_ELEMENT]:
-            token = Token(type=type, ok=store.ok_bound_variables)
+            if attr is None:
+                bound_variable = random.choice(store.bound_variables)
+            else:
+                filtered_list = [
+                    elem for elem in store.bound_variables if elem.attr == attr
+                ]
+                if len(filtered_list) == 0:
+                    # print(store.bound_variables)
+                    raise UnableToContinueError("適するattrが存在しませんでした。")
+                bound_variable = random.choice(filtered_list)
+            token = Token(type=type, ok=[bound_variable.text])
+            bound_variable.appearance()
         elif store.context in [
             Context.QUANTIFIER_BOOLEAN,
             Context.GENERATION_SET,
             Context.QUANTIFIER_INDEX,
             Context.INDEX_FUNCTION,
         ]:
-            token = Token(type=type, ng=store.ng_bound_variables)
-            store.register_bound_variables(token.text)
+            text = store.gen_bound_variable_name()
+            token = Token(type=type, ok=[text])
+            bound_variable = BoundVariableData(text, attr)
+            store.register_bound_variables(bound_variable)
         else:
-            token = Token(type=type)
-        self.__text = token.text
+            raise UnknownError("知らないエラーが起きました。")
+        self.__data = bound_variable
         super().__init__(token=token)
 
     @property
     def text(self) -> str:
-        return self.__text
+        return self.__data.text
+
+    @property
+    def data(self) -> BoundVariableData:
+        return self.__data
+
+    @property
+    def attr(self) -> Attribute:
+        return self.__data.attr
 
 
 class Inf(RawToken):
@@ -253,6 +297,10 @@ class EmptySet(RawToken):
     def __init__(self):
         token = Token(type=TokenType.EMPTYSET)
         super().__init__(token=token)
+
+    @property
+    def attr(self) -> None:
+        return None
 
 
 class Integer(RawToken):
@@ -322,6 +370,8 @@ class All(RawToken):
 
 
 class Exists(RawToken):
+    WEIGHT = 2
+
     def __init__(self):
         token = Token(type=TokenType.EXISTS)
         super().__init__(token=token)

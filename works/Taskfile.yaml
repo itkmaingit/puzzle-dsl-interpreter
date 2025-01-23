@@ -28,12 +28,7 @@ tasks:
     cmds:
       - bash scripts/convert_tabs_to_spaces.sh
       - python scripts/convert_head_spaces_to_tabs.py
-      - |
-        if [ -z "{{.CLI_ARGS}}" ]; then
-          poetry run python puzzle_dsl_interpreter/main.py --action generator
-        else
-          poetry run python puzzle_dsl_interpreter/main.py --action generator -o {{.CLI_ARGS}}
-        fi
+      - poetry run python puzzle_dsl_interpreter/main.py --action generator
 
   analyze:
     desc: The task is to add analysis to the pzl file.
@@ -51,9 +46,18 @@ tasks:
     desc: The task is to execute tests.
     cmds:
       - poetry run pytest
+  gotest:
+    desc: The task is to execute gotests.
+    dir: puzzle_dsl_interpreter/generator/go
+    cmds:
+      - go test -v
 
   example-analyze:
     desc: The task is to carry out an analysis on an existing puzzle on a trial basis.
     dir: scripts
     cmds:
       - bash ./all_test.sh
+
+  poc:
+    cmds:
+      - poetry run python3 puzzle_dsl_interpreter/poc/poc.py

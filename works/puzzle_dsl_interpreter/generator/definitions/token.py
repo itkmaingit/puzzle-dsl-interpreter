@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import random
-import re
 from enum import IntEnum, auto
 
 import exrex
 from generator.definitions.errors import UnableToContinueError
+from generator.stores.store import store
 from generator.utils.logger import logger
 from pydantic import BaseModel
 
@@ -37,17 +37,14 @@ class Token(BaseModel):
             in_ng = True
             while in_ng:
                 if i > LIMIT:
-                    print(i)
-                    print(" 適切な変数を選べませんでした。")
-                    raise RecursionError
+                    logger.info(" 適切な変数を選べませんでした。")
+                    store.initialize()
+                    raise UnableToContinueError
                 text = exrex.getone(pattern)
                 in_ng = text in ng
                 i += 1
         else:
             text = exrex.getone(pattern)
-        if not re.match(pattern, text):
-            logger.debug(f"text: {text}, pattern: {pattern}, ok: {ok}")
-            raise ValueError("Tokenの文字列が不正です。")
         super().__init__(type=type, text=text)
         if error_flag:
             logger.error(f"[red] Undefined Variable: {text}")
@@ -170,7 +167,7 @@ TOKEN_PATTERNS = {
     TokenType.FILL: r"^fill$",
     TokenType.SUM: r"^Sum$",
     TokenType.PRODUCT: r"^Product$",
-    TokenType.BOUND_VARIABLE: r"^[a-lo-wyz][a-z0-9]?$",
+    TokenType.BOUND_VARIABLE: r"^[b-hjkl-uwyz][a-z0-9]?$",
     TokenType.INF: r"^inf$",
     TokenType.HEIGHT: r"^n$",
     TokenType.WIDTH: r"^m$",
