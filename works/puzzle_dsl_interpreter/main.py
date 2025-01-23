@@ -5,6 +5,7 @@ import random
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 import uuid
 from argparse import ArgumentParser
@@ -23,6 +24,7 @@ try_times = 0
 
 
 def generate():
+    start = time.perf_counter()
     while True:
         sys.setrecursionlimit(1000)
         while True:
@@ -48,7 +50,7 @@ def generate():
             print(e)
             print(traceback.format_exc())
             sys.exit(1)
-        run_tmp_py(checker_code, sentence)
+        run_tmp_py(checker_code, sentence, start)
 
 
 def interpret(filepath: str):
@@ -56,7 +58,7 @@ def interpret(filepath: str):
     PuzzleDSLInterpreter(input_stream)
 
 
-def run_tmp_py(code_str: str, pzl_str: str):
+def run_tmp_py(code_str: str, pzl_str: str, start: float):
     global success_times
     global try_times
     try_times += 1
@@ -76,6 +78,8 @@ def run_tmp_py(code_str: str, pzl_str: str):
 
     stdout, stderr = process.communicate()
     return_code = process.returncode
+    end = time.perf_counter()
+    time_diff = end - start
 
     # 3. リターンコードが 1 の場合: tmp.py を削除
     if return_code == 1:
@@ -103,19 +107,20 @@ def run_tmp_py(code_str: str, pzl_str: str):
                 f.write(pzl_str)
             with Path.open(f"success/{filename}.txt", "w", encoding="utf-8") as f:
                 f.write(stdout)
+
         print(
-            f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}".replace(
+            f"Failed... | {stdout} | 試行回数: {try_times}, 成功回数: {success_times}, 実行時間: {time_diff}".replace(
                 "\r",
                 "",
             ).replace("\n", ""),
         )
-        if random.random() < 1 / 100:
-            Path("samples").mkdir(exist_ok=True)
-            filename = str(uuid.uuid4())
-            shutil.copy(tmp_file_path, f"samples/{filename}.py")
-            with Path.open(f"samples/{filename}.pzl", "w", encoding="utf-8") as f:
-                f.write(pzl_str)
-        Path.unlink(tmp_file_path)
+        # if random.random() < 1 / 100:
+        #     Path("samples").mkdir(exist_ok=True)
+        #     filename = str(uuid.uuid4())
+        #     shutil.copy(tmp_file_path, f"samples/{filename}.py")
+        #     with Path.open(f"samples/{filename}.pzl", "w", encoding="utf-8") as f:
+        #         f.write(pzl_str)
+        # Path.unlink(tmp_file_path)
 
     # 4. リターンコードが 0 の場合: stdout から成功回数を読み取り、data/[file].txt を作成して書き込む
     if return_code == 0:
@@ -136,6 +141,8 @@ def run_tmp_py(code_str: str, pzl_str: str):
             f.write(success_count)
         with Path.open(output_pzl_path, "w", encoding="utf-8") as f:
             f.write(pzl_str)
+        with Path.open("time.txt", "a", encoding="utf-8") as f:
+            f.write(str(time_diff) + "\n")
         shutil.copy(tmp_file_path, f"data/{unique_id}.py")
         print("############# 成功!!!!!!!!!!!!!!!! ###################")
         print(f"成功回数 : {success_count}")

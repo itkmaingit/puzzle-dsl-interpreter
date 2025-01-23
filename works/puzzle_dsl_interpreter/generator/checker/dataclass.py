@@ -24,7 +24,7 @@ class Relationship(StrEnum):
     D = "D"
 
 
-point_candidates = [0, 1, 2, 3]
+point_candidates = [0, 1, 2, 3, 4]
 edge_candidates = [0, 1]
 
 

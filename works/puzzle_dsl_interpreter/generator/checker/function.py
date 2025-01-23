@@ -19,16 +19,26 @@ def is_subset(A: set[Any], B: set[Any]) -> bool:
         raise PanicError(f"{A} is not set")
     if not isinstance(B, set):
         raise PanicError(f"{B} is not set")
+    if len(A) == 0:
+        return False
+    if len(B) == 0:
+        return False
     return all(a in B for a in A)
 
 
 def is_in(A: Any, B: set[Any]) -> bool:
     if not isinstance(B, set):
         raise PanicError(f"{B} is not set")
+    if len(B) == 0:
+        return False
     return A in B
 
 
 def compare_set(A: set[Any], B: set[Any]) -> bool:
+    if len(A) == 0:
+        return False
+    if len(B) == 0:
+        return False
     return A == B
 
 
@@ -107,8 +117,8 @@ def is_rectangle(elements: set[Element]) -> bool:
     """Check if the elements form a rectangle on a grid with all interior points filled."""
     if not isinstance(elements, set):
         raise PanicError(f"{elements} is not set")
-    if not elements:
-        return True
+    if len(elements) == 0:
+        return False
 
     if not same_attr(elements):
         return False
@@ -139,6 +149,8 @@ def is_rectangle(elements: set[Element]) -> bool:
 def is_square(elements: set[Element]) -> bool:
     if not isinstance(elements, set):
         raise PanicError(f"{elements} is not set")
+    if len(elements) == 0:
+        return False
     j_coords = {elem.j for elem in elements}
     i_coords = {elem.i for elem in elements}
 
@@ -156,6 +168,8 @@ def all_different(elements: set[Element]) -> bool:
         raise PanicError(f"{elements} is not set")
     seen_values = set()
     if not same_attr(elements):
+        return False
+    if len(elements) == 0:
         return False
     for elem in elements:
         if elem.value in seen_values:

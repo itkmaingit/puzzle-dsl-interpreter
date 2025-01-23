@@ -50,6 +50,8 @@ class C(RawToken):
 
 
 class EP(RawToken):
+    WEIGHT = 2
+
     def __init__(self):
         token = Token(type=TokenType.EP)
         super().__init__(token=token)

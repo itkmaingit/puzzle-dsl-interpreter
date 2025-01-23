@@ -79,12 +79,12 @@ class StructId(AlternativeRule):
                 choices = [token.P]
             case Attribute.C:
                 choices = [token.C]
-            case Attribute.Ec:
-                choices = [token.EC]
+            # case Attribute.Ec:
+            #     choices = [token.EC]
             case Attribute.Ep:
                 choices = [token.EP]
             case _:
-                choices = [token.P, token.C, token.EC, token.EP]
+                choices = [token.P, token.C, token.EP]
         # if (
         #     store.count_new_structs >= 2
         #     or store.context != Context.STRUCT_DEFINITION_BODY
@@ -682,10 +682,11 @@ class Int(AlternativeRule):
         ]
         if store.exists_bound_variables():
             choices.append(SolutionFunction)
-        if store.exists_specific_attr_bound_variables(Attribute.P):
-            choices.append(CrossFunction)
-        if store.exists_specific_attr_bound_variables(Attribute.C):
-            choices.append(CycleFunction)
+        if "Ep" in store.all_target_structs:
+            if store.exists_specific_attr_bound_variables(Attribute.P):
+                choices.append(CrossFunction)
+            if store.exists_specific_attr_bound_variables(Attribute.C):
+                choices.append(CycleFunction)
         choice = lottery(choices, self.__class__.__name__)()
         super().__init__(choice=choice)
 
@@ -801,6 +802,8 @@ class BFunction(OrderRule):
 
 
 class CrossFunction(OrderRule):
+    WEIGHT = 5
+
     def __init__(self):
         order = [
             token.Cross(),
@@ -821,6 +824,8 @@ class CrossFunction(OrderRule):
 
 
 class CycleFunction(OrderRule):
+    WEIGHT = 5
+
     def __init__(self):
         order = [
             token.Cycle(),
@@ -1431,6 +1436,9 @@ class Boolean(AlternativeRule):
             self.SetEquality,
             # self.PrimitiveValueComparison,
             self.IntValueComparison,
+            AllDifferentFunction,
+            IsSquareFunction,
+            IsRectangleFunction,
         ]
         # if store.exists_bound_variables():
         #     choices += [AllDifferentFunction, IsSquareFunction, IsRectangleFunction]
@@ -1633,6 +1641,7 @@ class ConstraintDefinition(OrderRule):
             store.exit_constraint_definition()
             if len(store.target_structs) == 0:
                 continue
+            store.determine_target_structs(store.target_structs)
             break
         order = [
             token.Indent(),

@@ -60,6 +60,10 @@ class StateStore:
     def can_choose_quantifier_boolean_counts(self) -> int:
         return self.__choose_quantifier_boolean_counts < 4
 
+    @property
+    def all_target_structs(self) -> list[str]:
+        return list(set(self.__all_targets))
+
     def exists_bound_variables(self) -> bool:
         return len(self.bound_variables) >= 1
 
@@ -153,6 +157,9 @@ class StateStore:
         self.__bound_variable_counter += 1
         return f"b{self.__bound_variable_counter}"
 
+    def determine_target_structs(self, targets: list[str]):
+        self.__all_targets.extend(targets)
+
     def initialize(self):
         self.__defined_struct_store = VariableStore(
             is_deletable=False,
@@ -176,6 +183,7 @@ class StateStore:
 
         self.__choose_quantifier_boolean_counts = 0
         self.__bound_variable_counter = 0
+        self.__all_targets = []
 
     # --------------------for debug------------------------
     def exit_struct_definitions(self):

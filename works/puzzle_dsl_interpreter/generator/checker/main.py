@@ -175,8 +175,10 @@ def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], s
 
         case BooleanType.ALL_DIFFERENT:
             # all_different(variable)
-            variable = args.get("variable")
-            lines.append(f"{indent_str}{var_name} = all_different({variable})")
+            variable = args["variable"]
+            child_lines, child_var = parse_node(variable, indent_level)
+            lines.extend(child_lines)
+            lines.append(f"{indent_str}{var_name} = all_different({child_var})")
 
         case BooleanType.SET_EQUATION:
             # set_equation("==", left, right)
@@ -226,12 +228,16 @@ def handle_boolean_node(node: dict, indent_level: int = 1) -> tuple[list[str], s
             )
 
         case BooleanType.IS_RECTANGLE:
-            variable = args.get("variable")
-            lines.append(f"{indent_str}{var_name} = is_rectangle({variable})")
+            variable = args["variable"]
+            child_lines, child_var = parse_node(variable, indent_level)
+            lines.extend(child_lines)
+            lines.append(f"{indent_str}{var_name} = is_rectangle({child_var})")
 
         case BooleanType.IS_SQUARE:
-            variable = args.get("variable")
-            lines.append(f"{indent_str}{var_name} = is_square({variable})")
+            variable = args["variable"]
+            child_lines, child_var = parse_node(variable, indent_level)
+            lines.extend(child_lines)
+            lines.append(f"{indent_str}{var_name} = is_square({child_var})")
 
         case _:
             raise PanicError("Unsupported boolean")
